@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}{% if job %}แก้ไขงาน #{{ job.pk }}{% else %}รับงานใหม่{% endif %} — Print Shop Manager{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'jobs:list' %}" class="hover:text-indigo-600">งาน</a>
+  <span class="mx-1 text-gray-400">/</span>
+  {% if job %}แก้ไข #{{ job.pk }}{% else %}รับงานใหม่{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  input[type=text], input[type=number], input[type=date], select, textarea {
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    <!-- Customer + product -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">ข้อมูลพื้นฐาน</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Customer autocomplete -->
+        <div x-data="customerSearch('{{ job.customer.pk }}', '{{ job.customer.name|escapejs }}')"
+             class="relative">
+          <label class="block text-sm font-medium text-gray-700 mb-1">ลูกค้า <span class="text-red-500">*</span></label>
+
+          <div class="flex gap-2">
+            <input type="text"
+                   x-model="query"
+                   @input.debounce.250ms="search()"
+                   @keydown.escape="open = false"
+                   @keydown.arrow-down.prevent="focusResult(1)"
+                   @keydown.arrow-up.prevent="focusResult(-1)"
+                   @keydown.enter.prevent="selectFocused()"
+                   @blur="closeSoon()"
+                   placeholder="พิมพ์ชื่อหรือเบอร์โทร..."
+                   autocomplete="off"
+                   class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button type="button" x-show="selectedId" @click="clear()"
+                    class="px-2 text-gray-400 hover:text-red-500 transition-colors" title="ล้าง">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Hidden input bound reactively to selectedId -->
+          <input type="hidden" name="customer" :value="selectedId">
+
+          <!-- Dropdown results -->
+          <div x-show="open" x-cloak
+               class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+            <template x-for="(c, i) in results" :key="c.id">
+              <button type="button"
+                      @mousedown.prevent="select(c)"
+                      :class="focused === i ? 'bg-indigo-50' : 'hover:bg-gray-50'"
+                      class="w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-3 transition-colors">
+                <span x-text="c.name" class="font-medium text-gray-900 truncate"></span>
+                <span x-text="c.phone" class="text-xs text-gray-400 shrink-0"></span>
+              </button>
+            </template>
+            <div x-show="results.length === 0 && query.length >= 1 && !loading"
+                 class="px-4 py-3 text-sm text-gray-400 text-center">
+              ไม่พบลูกค้า — <a href="{% url 'customers:create' %}" target="_blank"
+                              class="text-indigo-600 hover:underline">สร้างใหม่</a>
+            </div>
+          </div>
+
+          {% if form.customer.errors %}
+          <p class="text-xs text-red-600 mt-1">{{ form.customer.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">ประเภทสินค้า <span class="text-red-500">*</span></label>
+          {{ form.product_type }}
+          {% if form.product_type.errors %}<p class="text-xs text-red-600 mt-1">{{ form.product_type.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">ชื่องาน <span class="text-red-500">*</span></label>
+          {{ form.title }}
+          {% if form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ form.title.errors.0 }}</p>{% endif %}
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียด</label>
+          {{ form.description }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Dimensions + qty -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">ขนาดและจำนวน</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">จำนวน</label>
+          {{ form.quantity }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">กว้าง (ซม.)</label>
+          {{ form.width_cm }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">สูง (ซม.)</label>
+          {{ form.height_cm }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">กำหนดส่ง</label>
+          {{ form.due_date }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">ราคา</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">ราคารวม (บาท) <span class="text-red-500">*</span></label>
+          {{ form.quoted_price }}
+          {% if form.quoted_price.errors %}<p class="text-xs text-red-600 mt-1">{{ form.quoted_price.errors.0 }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">มัดจำ (บาท)</label>
+          {{ form.deposit_amount }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">ส่วนลด (บาท)</label>
+          {{ form.discount_amount }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Assignment + notes -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">การมอบหมาย</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">นักออกแบบ</label>
+          {{ form.assigned_designer }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">หมายเหตุภายใน</label>
+          {{ form.internal_notes }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3">
+      <button type="submit"
+              class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+        {% if job %}บันทึกการแก้ไข{% else %}รับงาน{% endif %}
+      </button>
+      <a href="{% url 'jobs:list' %}"
+         class="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+        ยกเลิก
+      </a>
+    </div>
+
+  </form>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+function customerSearch(initialId, initialName) {
+  return {
+    query: initialName || '',
+    selectedId: initialId || '',
+    results: [],
+    open: false,
+    focused: -1,
+    loading: false,
+
+    search() {
+      if (this.query.length < 1) {
+        this.results = [];
+        this.open = false;
+        return;
+      }
+      this.loading = true;
+      fetch(`{% url 'customers:autocomplete' %}?q=${encodeURIComponent(this.query)}`)
+        .then(r => r.json())
+        .then(data => {
+          this.results = data;
+          this.open = true;
+          this.focused = -1;
+          this.loading = false;
+        });
+    },
+
+    select(c) {
+      this.query = c.name;
+      this.selectedId = c.id;
+      this.open = false;
+      this.results = [];
+    },
+
+    clear() {
+      this.query = '';
+      this.selectedId = '';
+      this.open = false;
+      this.results = [];
+    },
+
+    focusResult(dir) {
+      if (!this.open) return;
+      this.focused = Math.max(-1, Math.min(this.results.length - 1, this.focused + dir));
+    },
+
+    selectFocused() {
+      if (this.focused >= 0 && this.results[this.focused]) this.select(this.results[this.focused]);
+    },
+
+    closeSoon() {
+      setTimeout(() => { this.open = false; }, 150);
+    }
+  };
+}
+</script>
+{% endblock extra_scripts %}

@@ -1,0 +1,42 @@
+[project]
+name = "printshopmgr"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.1",
+    "psycopg[binary]>=3.2",
+    "django-environ>=0.11",
+    "django-unfold>=0.40",
+    "weasyprint>=62",
+    "celery[redis]>=5.4",
+    "promptpay>=0.2",
+    "pillow>=11",
+    "django-storages>=1.14",
+]
+
+[dependency-groups]
+dev = [
+    "django-debug-toolbar>=4.4",
+    "pytest-django>=4.9",
+    "pytest-cov>=6",
+    "ruff>=0.8",
+    "factory-boy>=3.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--tb=short"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["*/migrations/*", "*/tests/*", "manage.py", "config/wsgi.py", "config/asgi.py"]

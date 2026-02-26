@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}แดชบอร์ด — Print Shop Manager{% endblock %}
+
+{% block breadcrumb %}แดชบอร์ด{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- KPI cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">รายได้เดือนนี้</p>
+      <p class="text-2xl font-bold text-gray-900 mt-2">{{ monthly_revenue|baht }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">ยอดค้างชำระ</p>
+      <p class="text-2xl font-bold {% if outstanding %}text-red-600{% else %}text-gray-900{% endif %} mt-2">
+        {{ outstanding|baht }}
+      </p>
+    </div>
+
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">รอดำเนินการ</p>
+      <p class="text-2xl font-bold {% if pending_count %}text-yellow-600{% else %}text-gray-900{% endif %} mt-2">
+        {{ pending_count }}
+      </p>
+    </div>
+
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">พร้อมรับสินค้า</p>
+      <p class="text-2xl font-bold {% if ready_count %}text-green-600{% else %}text-gray-900{% endif %} mt-2">
+        {{ ready_count }}
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Pipeline summary -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">สรุปงานตามสถานะ</h2>
+    {% if pipeline_rows %}
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      {% for row in pipeline_rows %}
+      <a href="{% url 'jobs:list' %}?status={{ row.status }}"
+         class="bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-lg p-3 text-center transition-colors group">
+        <div class="text-2xl font-bold text-indigo-600 group-hover:text-indigo-700">{{ row.count }}</div>
+        <div class="text-xs text-gray-500 mt-1 leading-tight">{{ row.label }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="py-10 text-center">
+      <p class="text-gray-400 text-sm">ยังไม่มีงานในระบบ</p>
+      <a href="{% url 'jobs:create' %}"
+         class="mt-3 inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+        ➕ รับงานแรก
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Overdue jobs -->
+  {% if overdue_jobs %}
+  <div class="bg-red-50 rounded-xl border border-red-200 p-5">
+    <h2 class="text-sm font-semibold text-red-800 uppercase tracking-wide mb-3">
+      ⚠️ งานเกินกำหนดส่ง ({{ overdue_jobs|length }})
+    </h2>
+    <div class="overflow-x-auto -mx-1">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-red-600 uppercase border-b border-red-200">
+            <th class="text-left py-2 px-1">#</th>
+            <th class="text-left py-2 px-1">ชื่องาน</th>
+            <th class="text-left py-2 px-1 hidden sm:table-cell">ลูกค้า</th>
+            <th class="text-left py-2 px-1">กำหนดส่ง</th>
+            <th class="text-left py-2 px-1">สถานะ</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-red-100">
+          {% for job in overdue_jobs %}
+          <tr class="hover:bg-red-100 transition-colors">
+            <td class="py-2 px-1">
+              <a href="{% url 'jobs:detail' job.pk %}" class="font-medium text-red-700 hover:underline">#{{ job.pk }}</a>
+            </td>
+            <td class="py-2 px-1 font-medium text-gray-900">{{ job.title|truncatechars:35 }}</td>
+            <td class="py-2 px-1 text-gray-600 hidden sm:table-cell">{{ job.customer.name }}</td>
+            <td class="py-2 px-1 text-red-700 font-semibold whitespace-nowrap">{{ job.due_date|thai_date_short }}</td>
+            <td class="py-2 px-1 text-gray-600">{{ job.get_status_display }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

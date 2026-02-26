@@ -1,0 +1,60 @@
+{% load thai_filters %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ติดตามงาน #{{ job.pk }} — Print Shop Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="max-w-lg mx-auto px-4 py-8">
+
+    <div class="text-center mb-6">
+      <span class="text-3xl">🖨️</span>
+      <h1 class="text-xl font-bold mt-2">ติดตามงานของคุณ</h1>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+      <div>
+        <p class="text-xs text-gray-500">หมายเลขงาน</p>
+        <p class="font-bold text-lg">#{{ job.pk }} — {{ job.title }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500">ประเภทสินค้า</p>
+        <p class="font-medium">{{ job.product_type.name }}</p>
+      </div>
+      <div>
+        <p class="text-xs text-gray-500">สถานะปัจจุบัน</p>
+        <p class="font-bold text-indigo-700 text-lg">{{ job.get_status_display }}</p>
+      </div>
+      {% if job.due_date %}
+      <div>
+        <p class="text-xs text-gray-500">กำหนดส่ง</p>
+        <p class="font-medium">{{ job.due_date|thai_date }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if history %}
+    <div class="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h2 class="text-sm font-semibold text-gray-700 mb-3">ความเคลื่อนไหวล่าสุด</h2>
+      <ul class="space-y-2">
+        {% for h in history %}
+        <li class="flex items-start gap-3 text-sm">
+          <span class="w-2 h-2 bg-indigo-400 rounded-full mt-1.5 flex-shrink-0"></span>
+          <div>
+            <span class="font-medium">{{ h.get_to_status_display }}</span>
+            <span class="text-gray-400 ml-2">{{ h.changed_at|thai_date }}</span>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+  </div>
+</body>
+</html>

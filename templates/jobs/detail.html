@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}งาน #{{ job.pk }} — Print Shop Manager{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'jobs:list' %}" class="hover:text-indigo-600">งาน</a>
+  <span class="mx-1 text-gray-400">/</span>
+  #{{ job.pk }} {{ job.title|truncatechars:30 }}
+{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'jobs:edit' job.pk %}"
+   class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+  แก้ไข
+</a>
+<a href="{% url 'payments:pay' job.pk %}"
+   class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+  รับชำระ
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Main info -->
+  <div class="lg:col-span-2 space-y-4">
+
+    <!-- Job summary card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h1 class="text-lg font-bold text-gray-900">{{ job.title }}</h1>
+          <p class="text-sm text-gray-500 mt-0.5">
+            <a href="{% url 'customers:detail' job.customer.pk %}" class="hover:text-indigo-600 font-medium">{{ job.customer.name }}</a>
+            · {{ job.product_type.name }}
+          </p>
+        </div>
+        <span id="status-badge" class="flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium
+          {% if job.status == 'completed' %}bg-gray-100 text-gray-600
+          {% elif job.status == 'ready' %}bg-green-100 text-green-700
+          {% elif job.status == 'cancelled' %}bg-red-100 text-red-600
+          {% elif job.status == 'awaiting_approval' %}bg-blue-100 text-blue-700
+          {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+          {{ job.get_status_display }}
+        </span>
+      </div>
+
+      <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+        <div>
+          <dt class="text-xs text-gray-500 uppercase tracking-wide">จำนวน</dt>
+          <dd class="font-medium mt-0.5">{{ job.quantity }} {{ job.product_type.unit }}</dd>
+        </div>
+        {% if job.width_cm and job.height_cm %}
+        <div>
+          <dt class="text-xs text-gray-500 uppercase tracking-wide">ขนาด</dt>
+          <dd class="font-medium mt-0.5">{{ job.width_cm }} × {{ job.height_cm }} ซม.</dd>
+        </div>
+        {% endif %}
+        <div>
+          <dt class="text-xs text-gray-500 uppercase tracking-wide">กำหนดส่ง</dt>
+          <dd class="font-medium mt-0.5 {% if job.due_date and job.due_date < today %}text-red-600{% endif %}">
+            {{ job.due_date|thai_date_short|default:"—" }}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-xs text-gray-500 uppercase tracking-wide">รับงานโดย</dt>
+          <dd class="font-medium mt-0.5">{{ job.created_by.get_full_name|default:job.created_by.username }}</dd>
+        </div>
+        {% if job.assigned_designer %}
+        <div>
+          <dt class="text-xs text-gray-500 uppercase tracking-wide">นักออกแบบ</dt>
+          <dd class="font-medium mt-0.5">{{ job.assigned_designer.get_full_name }}</dd>
+        </div>
+        {% endif %}
+      </dl>
+
+      {% if job.description %}
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">รายละเอียด</p>
+        <p class="text-sm text-gray-700">{{ job.description }}</p>
+      </div>
+      {% endif %}
+
+      {% if job.internal_notes %}
+      <div class="mt-3 pt-3 border-t border-gray-100">
+        <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">หมายเหตุภายใน</p>
+        <p class="text-sm text-gray-600">{{ job.internal_notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Status update -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">เปลี่ยนสถานะ</h3>
+      <div class="flex gap-2 flex-wrap">
+        {% for value, label in job.get_status_display|dictsort:"0" %}{% endfor %}
+        <!-- Render allowed next-step transitions -->
+        {% with current=job.status %}
+        {% if current == 'pending' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="designing">
+            <button class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700">เริ่มออกแบบ</button>
+          </form>
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="printing">
+            <button class="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700">พิมพ์เลย (ไม่ต้องออกแบบ)</button>
+          </form>
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="cancelled">
+            <button class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg hover:bg-red-200">ยกเลิก</button>
+          </form>
+        {% elif current == 'designing' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="awaiting_approval">
+            <button class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700">ส่งให้ลูกค้าอนุมัติ</button>
+          </form>
+        {% elif current == 'awaiting_approval' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="approved">
+            <button class="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700">ลูกค้าอนุมัติ</button>
+          </form>
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="revision">
+            <button class="px-3 py-1.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-lg hover:bg-orange-200">ขอแก้ไข</button>
+          </form>
+        {% elif current == 'approved' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="printing">
+            <button class="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700">เริ่มพิมพ์</button>
+          </form>
+        {% elif current == 'printing' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="cutting">
+            <button class="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700">ตัดแล้ว</button>
+          </form>
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="ready">
+            <button class="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700">พร้อมรับ</button>
+          </form>
+        {% elif current == 'cutting' or current == 'laminating' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="ready">
+            <button class="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700">พร้อมรับ</button>
+          </form>
+        {% elif current == 'ready' %}
+          <form hx-post="{% url 'jobs:update_status' job.pk %}" hx-target="#status-badge" hx-swap="outerHTML">
+            {% csrf_token %}<input type="hidden" name="status" value="completed">
+            <button class="px-3 py-1.5 bg-gray-700 text-white text-xs font-medium rounded-lg hover:bg-gray-800">ลูกค้ารับแล้ว / เสร็จสิ้น</button>
+          </form>
+        {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+
+    <!-- Status history -->
+    {% if history %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">ประวัติสถานะ</h3>
+      <ol class="space-y-2">
+        {% for h in history %}
+        <li class="flex items-start gap-3 text-sm">
+          <span class="w-2 h-2 bg-indigo-400 rounded-full mt-1.5 flex-shrink-0"></span>
+          <div class="flex-1">
+            <span class="font-medium text-gray-900">{{ h.get_to_status_display }}</span>
+            {% if h.note %}<span class="text-gray-500 ml-1">— {{ h.note }}</span>{% endif %}
+          </div>
+          <div class="text-xs text-gray-400 whitespace-nowrap">
+            {{ h.changed_at|thai_date_short }} · {{ h.changed_by.get_full_name|default:h.changed_by.username }}
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Sidebar: pricing + payments + actions -->
+  <div class="space-y-4">
+
+    <!-- Pricing summary -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">สรุปราคา</h3>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-500">ราคารวม</dt>
+          <dd class="font-medium">{{ job.quoted_price|baht }}</dd>
+        </div>
+        {% if job.discount_amount %}
+        <div class="flex justify-between text-green-700">
+          <dt>ส่วนลด</dt>
+          <dd>-{{ job.discount_amount|baht }}</dd>
+        </div>
+        {% endif %}
+        <div class="flex justify-between">
+          <dt class="text-gray-500">ชำระแล้ว</dt>
+          <dd class="font-medium text-green-700">{{ job.total_paid|baht }}</dd>
+        </div>
+        <div class="flex justify-between border-t border-gray-100 pt-2 font-semibold">
+          <dt>ค้างชำระ</dt>
+          <dd class="{% if job.balance_due > 0 %}text-red-600{% else %}text-green-700{% endif %}">
+            {{ job.balance_due|baht }}
+          </dd>
+        </div>
+      </dl>
+      {% if job.balance_due > 0 %}
+      <a href="{% url 'payments:pay' job.pk %}"
+         class="mt-4 flex items-center justify-center gap-1 w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+        รับชำระ ฿{{ job.balance_due|floatformat:0 }}
+      </a>
+      {% endif %}
+    </div>
+
+    <!-- Documents -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">เอกสาร</h3>
+      {% for doc in job.documents.filter %}{% endfor %}
+      <div class="space-y-2">
+        {% for doc in job.documents.all %}
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-700 font-mono text-xs">{{ doc.document_number }}</span>
+          <a href="{% url 'documents:pdf' doc.pk %}"
+             class="text-indigo-600 hover:underline text-xs" target="_blank">PDF</a>
+        </div>
+        {% empty %}
+        <p class="text-xs text-gray-400">ยังไม่มีเอกสาร</p>
+        {% endfor %}
+        <a href="{% url 'documents:create_quotation' job.pk %}"
+           class="mt-2 flex items-center justify-center gap-1 w-full border border-gray-200 text-gray-600 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+          + ออกใบเสนอราคา
+        </a>
+      </div>
+    </div>
+
+    <!-- Tracking link -->
+    <div class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+      <p class="text-xs text-gray-500 mb-2">ลิงก์ติดตามงานสำหรับลูกค้า</p>
+      <div class="flex items-center gap-2">
+        <input type="text" value="{{ request.scheme }}://{{ request.get_host }}{{ job.get_tracking_url }}"
+               class="flex-1 text-xs bg-white border border-gray-200 rounded px-2 py-1.5 font-mono"
+               readonly onclick="this.select()">
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}{{ document.document_number }} — Print Shop Manager{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'documents:list' %}" class="hover:text-indigo-600">เอกสาร</a>
+  <span class="mx-1 text-gray-400">/</span>
+  {{ document.document_number }}
+{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'documents:pdf' document.pk %}"
+   target="_blank"
+   class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+  ดาวน์โหลด PDF
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide">{{ document.get_document_type_display }}</p>
+        <h1 class="text-xl font-bold font-mono mt-0.5">{{ document.document_number }}</h1>
+      </div>
+      <div class="text-right text-sm text-gray-500">
+        <p>{{ document.issued_at|thai_date }}</p>
+        <p class="mt-0.5">ออกโดย: {{ document.issued_by.get_full_name }}</p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-4">
+      <p class="text-sm font-semibold text-gray-800">{{ document.customer_name }}</p>
+      {% if document.customer_tax_id %}
+      <p class="text-xs text-gray-500 mt-0.5">เลขผู้เสียภาษี: {{ document.customer_tax_id }}</p>
+      {% endif %}
+      {% if document.customer_address %}
+      <p class="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{{ document.customer_address }}</p>
+      {% endif %}
+    </div>
+
+    <table class="w-full text-sm border-t border-gray-100">
+      <thead>
+        <tr class="text-xs text-gray-500 uppercase border-b border-gray-100">
+          <th class="text-left py-2">รายการ</th>
+          <th class="text-right py-2">จำนวน</th>
+          <th class="text-right py-2">ราคา/หน่วย</th>
+          <th class="text-right py-2">ยอด</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for item in document.items.all %}
+        <tr>
+          <td class="py-2 text-gray-900">{{ item.description }}</td>
+          <td class="py-2 text-right text-gray-600">{{ item.quantity }} {{ item.unit }}</td>
+          <td class="py-2 text-right text-gray-600">{{ item.unit_price|baht }}</td>
+          <td class="py-2 text-right font-medium">{{ item.amount|baht }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="border-t border-gray-200 font-semibold">
+          <td colspan="3" class="py-2 text-right text-gray-700">ยอดรวม</td>
+          <td class="py-2 text-right text-lg">{{ document.total_amount|baht }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    {% if document.notes %}
+    <p class="text-sm text-gray-500 border-t border-gray-100 pt-3">{{ document.notes }}</p>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

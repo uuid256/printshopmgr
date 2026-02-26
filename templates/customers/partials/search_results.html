@@ -1,0 +1,21 @@
+{% if customers %}
+<ul class="divide-y divide-gray-100 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+  {% for c in customers %}
+  <li>
+    <button
+      type="button"
+      class="w-full text-left px-4 py-3 hover:bg-indigo-50 text-sm"
+      hx-get="{% url 'customers:detail' c.pk %}"
+      hx-target="#customer-detail"
+      hx-push-url="false"
+      @click="selectedCustomer = { id: {{ c.pk }}, name: '{{ c.name }}', phone: '{{ c.phone }}' }"
+    >
+      <span class="font-medium text-gray-900">{{ c.name }}</span>
+      <span class="text-gray-500 ml-2">{{ c.phone }}</span>
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+{% elif q|length >= 2 %}
+<p class="text-sm text-gray-500 px-4 py-3">ไม่พบลูกค้า "{{ q }}"</p>
+{% endif %}

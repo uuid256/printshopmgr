@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}คิวการผลิต — Print Shop Manager{% endblock %}
+
+{% block breadcrumb %}<span class="text-sm text-gray-600">คิวการผลิต</span>{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h1 class="text-lg font-semibold text-gray-900">คิวการผลิต</h1>
+    <span class="text-sm text-gray-500">{{ jobs|length }} งาน</span>
+  </div>
+
+  {% if not jobs %}
+  <div class="bg-white rounded-xl border border-gray-100 p-8 text-center text-gray-400">
+    ไม่มีงานในคิวการผลิต
+  </div>
+  {% endif %}
+
+  <!-- Large cards for touch targets (mobile operator use) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for job in jobs %}
+    {% include "production/partials/job_card.html" %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

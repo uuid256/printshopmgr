@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}งานทั้งหมด — Print Shop Manager{% endblock %}
+
+{% block breadcrumb %}<span class="text-sm text-gray-600">งานทั้งหมด</span>{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'jobs:create' %}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+  + รับงานใหม่
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-100">
+
+  <!-- Filters -->
+  <div class="px-4 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
+    <a href="{% url 'jobs:list' %}" class="px-3 py-1 rounded-full text-xs font-medium {% if not status_filter %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+      ทั้งหมด
+    </a>
+    {% for value, label in all_statuses %}
+    <a href="?status={{ value }}" class="px-3 py-1 rounded-full text-xs font-medium {% if status_filter == value %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-500 uppercase border-b border-gray-100">
+          <th class="text-left px-4 py-3">#</th>
+          <th class="text-left px-4 py-3">ชื่องาน</th>
+          <th class="text-left px-4 py-3">ลูกค้า</th>
+          <th class="text-left px-4 py-3">ประเภท</th>
+          <th class="text-left px-4 py-3">สถานะ</th>
+          <th class="text-right px-4 py-3">ราคา</th>
+          <th class="text-left px-4 py-3">กำหนดส่ง</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for job in jobs %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3">
+            <a href="{% url 'jobs:detail' job.pk %}" class="text-indigo-600 font-medium hover:underline">#{{ job.pk }}</a>
+          </td>
+          <td class="px-4 py-3 font-medium">{{ job.title|truncatechars:40 }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ job.customer.name }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ job.product_type.name }}</td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium
+              {% if job.status == 'pending' %}bg-gray-100 text-gray-700
+              {% elif job.status == 'designing' or job.status == 'awaiting_approval' %}bg-blue-100 text-blue-700
+              {% elif job.status == 'ready' %}bg-green-100 text-green-700
+              {% elif job.status == 'completed' %}bg-gray-100 text-gray-500
+              {% elif job.status == 'cancelled' %}bg-red-100 text-red-700
+              {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+              {{ job.get_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right font-medium">{{ job.quoted_price|baht }}</td>
+          <td class="px-4 py-3 text-gray-600 {% if job.due_date and job.due_date < today %}text-red-600 font-medium{% endif %}">
+            {{ job.due_date|thai_date_short|default:"—" }}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-8 text-center text-gray-400">ยังไม่มีงาน</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

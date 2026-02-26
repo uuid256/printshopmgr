@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}รับชำระ — งาน #{{ job.pk }} — Print Shop Manager{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'jobs:detail' job.pk %}" class="hover:text-indigo-600">งาน #{{ job.pk }}</a>
+  <span class="mx-1 text-gray-400">/</span> รับชำระ
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+
+  <!-- Payment form -->
+  <div class="space-y-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">รับชำระเงิน</h2>
+
+      <form method="post" class="space-y-4" x-data="paymentForm()" x-init="init()">
+        {% csrf_token %}
+
+        <!-- Amount -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนเงิน (บาท)</label>
+          <input type="number" name="amount" step="0.01" min="0.01"
+                 :value="amount"
+                 @input="amount = $event.target.value; updateQR()"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right font-mono text-lg"
+                 placeholder="0.00" required>
+          <div class="flex gap-2 mt-2">
+            <button type="button" @click="setAmount({{ job.balance_due }})"
+                    class="flex-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg py-1.5 hover:bg-indigo-100 transition-colors font-medium">
+              ค้างชำระ {{ job.balance_due|baht }}
+            </button>
+            {% if job.deposit_amount %}
+            <button type="button" @click="setAmount({{ job.deposit_amount }})"
+                    class="flex-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded-lg py-1.5 hover:bg-gray-100 transition-colors">
+              มัดจำ {{ job.deposit_amount|baht }}
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Payment method chips -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">วิธีชำระ</label>
+          <div class="flex gap-2 flex-wrap">
+            {% for value, label in payment_methods %}
+            <label class="cursor-pointer">
+              <input type="radio" name="method" value="{{ value }}" class="sr-only"
+                     x-model="method" @change="updateQR()" {% if forloop.first %}checked{% endif %}>
+              <span :class="method === '{{ value }}' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'"
+                    class="inline-block px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors">
+                {{ label }}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Bank account (for transfer) -->
+        <div x-show="method === 'bank_transfer'">
+          <label class="block text-sm font-medium text-gray-700 mb-1">บัญชีที่รับโอน</label>
+          <select name="bank_account" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            {% for acct in bank_accounts %}
+            <option value="{{ acct.pk }}">{{ acct.bank_name }} — {{ acct.account_number }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Reference -->
+        <div x-show="method === 'bank_transfer' || method === 'promptpay'">
+          <label class="block text-sm font-medium text-gray-700 mb-1">เลขอ้างอิง / เลขสลิป</label>
+          <input type="text" name="reference_number"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 placeholder="เลขอ้างอิง (ถ้ามี)">
+        </div>
+
+        <!-- PromptPay QR (HTMX) -->
+        <div x-show="method === 'promptpay'">
+          <div id="promptpay-qr"
+               hx-get="{% url 'payments:promptpay_qr' %}"
+               hx-trigger="qr-update from:body"
+               hx-include="[name='amount']"
+               hx-vals='{"promptpay_id": "{{ bank_accounts.0.promptpay_id }}"}'
+               class="flex justify-center py-2">
+            <p class="text-sm text-gray-400">กรอกจำนวนเงินเพื่อดู QR Code</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" name="is_deposit" value="true" id="is_deposit" class="rounded">
+          <label for="is_deposit" class="text-sm text-gray-700">เป็นการชำระมัดจำ</label>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
+          <input type="text" name="notes" placeholder="(ไม่บังคับ)"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <button type="submit"
+                class="w-full bg-green-600 text-white py-3 rounded-xl text-base font-semibold hover:bg-green-700 transition-colors">
+          บันทึกการชำระ
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right: job summary + payment history -->
+  <div class="space-y-4">
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">สรุปงาน #{{ job.pk }}</h3>
+      <p class="font-medium text-gray-900">{{ job.title }}</p>
+      <p class="text-sm text-gray-500">{{ job.customer.name }}</p>
+      <dl class="mt-3 space-y-2 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-gray-500">ราคารวม</dt><dd class="font-medium">{{ job.quoted_price|baht }}</dd>
+        </div>
+        {% if job.discount_amount %}
+        <div class="flex justify-between text-green-700">
+          <dt>ส่วนลด</dt><dd>-{{ job.discount_amount|baht }}</dd>
+        </div>
+        {% endif %}
+        <div class="flex justify-between font-bold border-t border-gray-100 pt-2">
+          <dt class="text-red-600">ค้างชำระ</dt>
+          <dd class="text-red-600 text-lg">{{ job.balance_due|baht }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    {% if existing_payments %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-3">ประวัติชำระ</h3>
+      <div class="space-y-2">
+        {% for payment in existing_payments %}
+        <div class="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
+          <div>
+            <span class="font-medium text-gray-900">{{ payment.amount|baht }}</span>
+            <span class="text-gray-500 ml-2">{{ payment.get_method_display }}</span>
+            {% if payment.is_deposit %}<span class="ml-1 text-xs text-blue-600">(มัดจำ)</span>{% endif %}
+          </div>
+          <span class="text-xs text-gray-400">{{ payment.received_at|thai_date_short }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function paymentForm() {
+  return {
+    method: 'cash',
+    amount: '{{ job.balance_due }}',
+    init() {},
+    setAmount(v) {
+      this.amount = v;
+      document.querySelector('[name=amount]').value = v;
+      this.updateQR();
+    },
+    updateQR() {
+      if (this.method === 'promptpay') {
+        document.body.dispatchEvent(new Event('qr-update'));
+      }
+    }
+  }
+}
+</script>
+{% endblock %}

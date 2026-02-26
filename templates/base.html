@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="th" x-data="{ sidebarOpen: true }">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Print Shop Manager{% endblock %}</title>
+
+  <!-- Tailwind CSS (CDN — replace with compiled output in production) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Sarabun', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+
+  <!-- Thai font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Hide Alpine x-cloak elements until hydrated -->
+  <style>[x-cloak] { display: none !important; }</style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 font-sans text-gray-900" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+  {% if user.is_authenticated %}
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside x-show="sidebarOpen" class="w-64 bg-indigo-900 text-white flex flex-col flex-shrink-0">
+
+      <!-- Logo / user -->
+      <div class="px-6 py-4 border-b border-indigo-800">
+        <h1 class="text-base font-bold leading-tight tracking-wide">🖨️ Print Shop</h1>
+        <p class="text-xs text-indigo-400 mt-0.5">{{ request.user.get_full_name|default:request.user.username }}</p>
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 px-2 py-3 overflow-y-auto">
+
+        {% with app=request.resolver_match.app_name url_name=request.resolver_match.url_name %}
+
+        <a href="{% url 'dashboard:home' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'dashboard' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>📊</span> แดชบอร์ด
+        </a>
+
+        <a href="{% url 'jobs:list' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'jobs' and url_name != 'create' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>📋</span> งานทั้งหมด
+        </a>
+
+        <a href="{% url 'jobs:create' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'jobs' and url_name == 'create' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>➕</span> รับงานใหม่
+        </a>
+
+        <a href="{% url 'customers:list' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'customers' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>👥</span> ลูกค้า
+        </a>
+
+        <a href="{% url 'production:queue' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'production' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>🏭</span> คิวการผลิต
+        </a>
+
+        <a href="{% url 'documents:list' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'documents' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>📄</span> เอกสาร
+        </a>
+
+        {% if request.user.is_owner or request.user.is_staff %}
+        <div class="border-t border-indigo-800 my-2"></div>
+        <a href="{% url 'admin:index' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors text-indigo-200 hover:bg-indigo-800 hover:text-white">
+          <span>⚙️</span> ตั้งค่าระบบ
+        </a>
+        {% endif %}
+
+        {% endwith %}
+      </nav>
+
+      <!-- Logout -->
+      <div class="px-4 py-3 border-t border-indigo-800">
+        <p class="text-xs text-indigo-400 mb-1">{{ request.user.get_role_display }}</p>
+        <form method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="text-xs text-indigo-400 hover:text-white transition-colors">
+            ออกจากระบบ →
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+
+      <!-- Top bar -->
+      <header class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <button @click="sidebarOpen = !sidebarOpen"
+                class="p-1.5 rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                title="Toggle sidebar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <div class="flex-1 text-sm text-gray-600">
+          {% block breadcrumb %}{% endblock %}
+        </div>
+        {% block header_actions %}{% endblock %}
+      </header>
+
+      <!-- Flash messages -->
+      {% if messages %}
+      <div class="px-6 pt-4 space-y-2 flex-shrink-0">
+        {% for message in messages %}
+        <div class="px-4 py-3 rounded-lg text-sm border
+          {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-200
+          {% elif message.tags == 'success' %}bg-green-50 text-green-700 border-green-200
+          {% else %}bg-blue-50 text-blue-700 border-blue-200{% endif %}">
+          {{ message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Page content -->
+      <main class="flex-1 overflow-y-auto p-6">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Unauthenticated layout (login, public tracking) -->
+  {% block unauthenticated_content %}{% endblock %}
+  {% endif %}
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

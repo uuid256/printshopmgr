@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}ลูกค้า — Print Shop Manager{% endblock %}
+{% block breadcrumb %}ลูกค้า{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'customers:create' %}"
+   class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+  + เพิ่มลูกค้า
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Search -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+    <input
+      type="search"
+      name="q"
+      value="{{ q }}"
+      placeholder="ค้นหาชื่อ หรือเบอร์โทร..."
+      class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      hx-get="{% url 'customers:list' %}"
+      hx-trigger="input changed delay:300ms, search"
+      hx-target="#customer-table"
+      hx-push-url="true"
+    >
+  </div>
+
+  <!-- Table -->
+  <div id="customer-table" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    {% include "customers/partials/table.html" %}
+  </div>
+
+</div>
+{% endblock %}

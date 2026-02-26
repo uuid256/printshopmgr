@@ -46,6 +46,22 @@ def thai_date(value):
 
 
 @register.filter
+def thai_date_plus_days(value, days):
+    """Return Thai Buddhist Era date string for value + N days."""
+    from datetime import timedelta
+    if value is None:
+        return ""
+    if hasattr(value, "date"):
+        value = value.date()
+    try:
+        future = value + timedelta(days=int(days))
+        be_year = future.year + 543
+        return f"{future.day} {THAI_MONTHS_FULL[future.month]} {be_year}"
+    except (AttributeError, IndexError, TypeError, ValueError):
+        return str(value)
+
+
+@register.filter
 def thai_date_short(value):
     """Convert date to short Thai Buddhist Era format."""
     if value is None:

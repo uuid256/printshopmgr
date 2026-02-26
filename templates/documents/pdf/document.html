@@ -1,0 +1,450 @@
+{% load thai_filters %}<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ── Page setup ─────────────────────────────────────────────────── */
+  @page {
+    size: A4;
+    margin: 15mm 18mm 20mm 18mm;
+
+    @bottom-center {
+      content: "เอกสารออกโดยระบบคอมพิวเตอร์ — " string(doc-number) " — หน้า " counter(page) " / " counter(pages);
+      font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+      font-size: 7pt;
+      color: #9ca3af;
+    }
+  }
+
+  /* ── Fonts ──────────────────────────────────────────────────────── */
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+    font-size: 10pt;
+    color: #1f2937;
+    line-height: 1.5;
+  }
+
+  /* ── Void watermark ─────────────────────────────────────────────── */
+  {% if document.is_void %}
+  body::before {
+    content: "ยกเลิก";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-35deg);
+    font-size: 80pt;
+    font-weight: 700;
+    color: rgba(239, 68, 68, 0.15);
+    z-index: 0;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  {% endif %}
+
+  /* ── Header ─────────────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2.5pt solid #4f46e5;
+    padding-bottom: 10pt;
+    margin-bottom: 12pt;
+  }
+
+  .shop-name {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #4f46e5;
+    string-set: doc-number content();  /* overridden below */
+  }
+
+  .shop-meta {
+    font-size: 8pt;
+    color: #6b7280;
+    margin-top: 3pt;
+    line-height: 1.6;
+  }
+
+  .doc-header {
+    text-align: right;
+  }
+
+  .doc-type {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.2;
+  }
+
+  .doc-number {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #4f46e5;
+    margin-top: 3pt;
+    string-set: doc-number content();
+  }
+
+  .doc-meta {
+    font-size: 8.5pt;
+    color: #6b7280;
+    margin-top: 4pt;
+    line-height: 1.6;
+  }
+
+  /* ── Customer / Billing block ───────────────────────────────────── */
+  .parties {
+    display: flex;
+    gap: 12pt;
+    margin-bottom: 14pt;
+  }
+
+  .party-box {
+    flex: 1;
+    background: #f9fafb;
+    border: 0.5pt solid #e5e7eb;
+    border-radius: 4pt;
+    padding: 8pt 10pt;
+  }
+
+  .party-label {
+    font-size: 7pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    margin-bottom: 4pt;
+  }
+
+  .party-name {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .party-meta {
+    font-size: 8.5pt;
+    color: #6b7280;
+    margin-top: 2pt;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+
+  /* ── Items table ────────────────────────────────────────────────── */
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+    font-size: 9.5pt;
+  }
+
+  .items-table thead th {
+    background: #4f46e5;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 6pt 8pt;
+    text-align: left;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .items-table thead th.right { text-align: right; }
+
+  .items-table tbody td {
+    padding: 7pt 8pt;
+    border-bottom: 0.5pt solid #f3f4f6;
+    vertical-align: top;
+  }
+
+  .items-table tbody tr:nth-child(even) td {
+    background: #fafafa;
+  }
+
+  .items-table tbody td.right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .items-table tbody td.center {
+    text-align: center;
+  }
+
+  /* ── Totals ─────────────────────────────────────────────────────── */
+  .totals-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0;
+    border-top: 0.5pt solid #e5e7eb;
+  }
+
+  .totals-table {
+    width: 200pt;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+
+  .totals-table td {
+    padding: 4pt 8pt;
+  }
+
+  .totals-table td.label {
+    color: #6b7280;
+    text-align: right;
+  }
+
+  .totals-table td.amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-width: 70pt;
+  }
+
+  .totals-table tr.grand-total td {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #4f46e5;
+    border-top: 1.5pt solid #4f46e5;
+    padding-top: 6pt;
+  }
+
+  /* ── Amount in words ────────────────────────────────────────────── */
+  .amount-words {
+    margin-top: 8pt;
+    font-size: 9pt;
+    color: #374151;
+    border: 0.5pt solid #e5e7eb;
+    border-radius: 3pt;
+    padding: 6pt 10pt;
+    background: #f9fafb;
+    display: inline-block;
+  }
+
+  .amount-words span {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  /* ── Notes ──────────────────────────────────────────────────────── */
+  .notes {
+    margin-top: 14pt;
+    font-size: 9pt;
+    color: #6b7280;
+    border-left: 2pt solid #e5e7eb;
+    padding-left: 8pt;
+    line-height: 1.7;
+  }
+
+  /* ── Signatures ─────────────────────────────────────────────────── */
+  .signatures {
+    margin-top: 28pt;
+    display: flex;
+    justify-content: space-around;
+    page-break-inside: avoid;
+  }
+
+  .sig-box {
+    text-align: center;
+    width: 120pt;
+  }
+
+  .sig-line {
+    border-bottom: 0.75pt solid #374151;
+    height: 28pt;
+    margin-bottom: 4pt;
+  }
+
+  .sig-label {
+    font-size: 8pt;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+
+  /* ── Void badge ─────────────────────────────────────────────────── */
+  .void-badge {
+    display: inline-block;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1pt solid #fca5a5;
+    border-radius: 3pt;
+    padding: 1pt 6pt;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+    margin-left: 6pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     HEADER: shop info (left) + document type/number (right)
+═══════════════════════════════════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <div class="shop-name">{{ shop.name }}</div>
+    <div class="shop-meta">
+      {% if shop.address %}{{ shop.address }}<br>{% endif %}
+      {% if shop.tax_id %}เลขประจำตัวผู้เสียภาษี: {{ shop.tax_id }}<br>{% endif %}
+      {% if shop.phone %}โทร: {{ shop.phone }}{% endif %}
+    </div>
+  </div>
+
+  <div class="doc-header">
+    <div class="doc-type">
+      {{ document.get_document_type_display }}
+      {% if document.is_void %}<span class="void-badge">ยกเลิก</span>{% endif %}
+    </div>
+    <div class="doc-number">{{ document.document_number }}</div>
+    <div class="doc-meta">
+      วันที่: {{ document.issued_at|thai_date }}<br>
+      อ้างอิงงาน: #{{ document.job.pk }}<br>
+      ออกโดย: {{ document.issued_by.get_full_name|default:document.issued_by.username }}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     CUSTOMER / BILLED TO
+═══════════════════════════════════════════════════════════════════ -->
+<div class="parties">
+  <div class="party-box">
+    <div class="party-label">ลูกค้า / ผู้รับเอกสาร</div>
+    <div class="party-name">{{ document.customer_name }}</div>
+    <div class="party-meta">
+      {% if document.customer_tax_id %}เลขผู้เสียภาษี: {{ document.customer_tax_id }}{% endif %}
+      {% if document.customer_address %}
+{{ document.customer_address }}{% endif %}
+    </div>
+  </div>
+
+  <!-- Document-type-specific summary box -->
+  <div class="party-box">
+    <div class="party-label">
+      {% if document.document_type == "quotation" %}ข้อมูลใบเสนอราคา
+      {% elif document.document_type == "tax_invoice" %}ข้อมูลใบกำกับภาษี
+      {% elif document.document_type == "receipt" %}ข้อมูลการชำระเงิน
+      {% else %}ข้อมูลเอกสาร{% endif %}
+    </div>
+    <div class="party-meta" style="line-height:1.9">
+      เลขที่เอกสาร: <strong>{{ document.document_number }}</strong><br>
+      วันที่ออก: {{ document.issued_at|thai_date }}<br>
+      {% if document.document_type == "quotation" %}
+      ใช้ได้ถึง: {{ document.issued_at|thai_date_plus_days:30 }}<br>
+      {% endif %}
+      {% if document.vat_rate %}
+      อัตรา VAT: {{ document.vat_rate }}%<br>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     LINE ITEMS TABLE
+═══════════════════════════════════════════════════════════════════ -->
+<table class="items-table">
+  <thead>
+    <tr>
+      <th style="width: 30pt">#</th>
+      <th>รายการ</th>
+      <th class="right" style="width: 52pt">จำนวน</th>
+      <th class="right" style="width: 38pt">หน่วย</th>
+      <th class="right" style="width: 68pt">ราคา/หน่วย</th>
+      <th class="right" style="width: 72pt">ยอด</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in document.items.all %}
+    <tr>
+      <td class="center" style="color:#9ca3af">{{ forloop.counter }}</td>
+      <td>{{ item.description }}</td>
+      <td class="right">{{ item.quantity|floatformat:"-3" }}</td>
+      <td class="center" style="color:#6b7280">{{ item.unit }}</td>
+      <td class="right">{{ item.unit_price|baht }}</td>
+      <td class="right" style="font-weight:600">{{ item.amount|baht }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" style="text-align:center; color:#9ca3af; padding:16pt">ไม่มีรายการ</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TOTALS
+═══════════════════════════════════════════════════════════════════ -->
+<div class="totals-wrapper">
+  <table class="totals-table">
+    <tr>
+      <td class="label">ยอดก่อนภาษี</td>
+      <td class="amount">{{ document.subtotal|baht }}</td>
+    </tr>
+    {% if document.vat_rate %}
+    <tr>
+      <td class="label">ภาษีมูลค่าเพิ่ม {{ document.vat_rate }}%</td>
+      <td class="amount">{{ document.vat_amount|baht }}</td>
+    </tr>
+    {% endif %}
+    <tr class="grand-total">
+      <td class="label" style="color:#4f46e5">ยอดรวมทั้งสิ้น</td>
+      <td class="amount">{{ document.total_amount|baht }}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Amount in words -->
+<div>
+  <div class="amount-words">
+    จำนวนเงิน (ตัวอักษร): <span>{{ document.total_amount|baht_text }}</span>
+  </div>
+</div>
+
+{% if document.notes %}
+<!-- ══════════════════════════════════════════════════════════════════
+     NOTES
+═══════════════════════════════════════════════════════════════════ -->
+<div class="notes">
+  <strong>หมายเหตุ:</strong> {{ document.notes }}
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SIGNATURES
+═══════════════════════════════════════════════════════════════════ -->
+<div class="signatures">
+  <div class="sig-box">
+    <div class="sig-line"></div>
+    <div class="sig-label">
+      ผู้รับเงิน / ผู้ออกเอกสาร<br>
+      ({{ document.issued_by.get_full_name|default:document.issued_by.username }})
+    </div>
+  </div>
+
+  <div class="sig-box">
+    <div class="sig-line"></div>
+    <div class="sig-label">
+      {% if document.document_type == "receipt" %}
+        ผู้ชำระเงิน
+      {% elif document.document_type == "quotation" %}
+        ผู้อนุมัติใบเสนอราคา
+      {% else %}
+        ผู้รับเอกสาร
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sig-box">
+    <div class="sig-line"></div>
+    <div class="sig-label">
+      ผู้มีอำนาจลงนาม<br>
+      ({{ shop.name }})
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -12,6 +12,7 @@ dependencies = [
     "promptpay>=0.2",
     "pillow>=11",
     "django-storages>=1.14",
+    "line-bot-sdk>=3.11",
 ]
 
 [dependency-groups]

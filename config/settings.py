@@ -123,6 +123,10 @@ CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
 
+# LINE Messaging API (Phase 2)
+LINE_CHANNEL_ACCESS_TOKEN = env("LINE_CHANNEL_ACCESS_TOKEN", default="")
+LINE_CHANNEL_SECRET = env("LINE_CHANNEL_SECRET", default="")
+
 # django-unfold Admin customisation
 UNFOLD = {
     "SITE_TITLE": "Print Shop Manager",

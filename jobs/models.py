@@ -5,6 +5,7 @@ A Job moves through a defined status workflow with every transition
 recorded in JobStatusHistory for full audit trail.
 """
 
+import os
 import uuid
 
 from django.conf import settings
@@ -159,10 +160,11 @@ class Job(models.Model):
     def balance_due(self):
         return self.quoted_price - self.discount_amount - self.total_paid
 
-    def transition_to(self, new_status, changed_by, note=""):
+    def transition_to(self, new_status, changed_by=None, note=""):
         """
         Move job to new_status, enforcing allowed transitions.
         Records history entry for every change.
+        changed_by=None is allowed for customer-initiated transitions (public tracking page).
         """
         allowed = ALLOWED_TRANSITIONS.get(self.status, set())
         if new_status not in allowed:
@@ -187,6 +189,13 @@ class Job(models.Model):
 
         return reverse("public:track", kwargs={"token": self.tracking_token})
 
+    def first_proof_image(self):
+        """Return the first proof file that is an image (uses prefetch cache)."""
+        for f in self.files.all():
+            if f.file_type == JobFile.FileType.PROOF and f.is_image:
+                return f
+        return None
+
 
 class JobStatusHistory(models.Model):
     """Immutable audit log of every status change on a job."""
@@ -197,6 +206,8 @@ class JobStatusHistory(models.Model):
     changed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         verbose_name="เปลี่ยนโดย",
     )
     note = models.TextField(blank=True)
@@ -235,6 +246,28 @@ class JobFile(models.Model):
     def __str__(self):
         return f"{self.get_file_type_display()} — Job #{self.job_id}"
 
+    @property
+    def filename(self):
+        return os.path.basename(self.file.name)
+
+    @property
+    def is_image(self):
+        ext = os.path.splitext(self.file.name)[1].lower()
+        return ext in {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+    @property
+    def filesize_display(self):
+        try:
+            size = self.file.size
+            if size < 1024:
+                return f"{size} B"
+            elif size < 1024 * 1024:
+                return f"{size // 1024} KB"
+            else:
+                return f"{size / (1024 * 1024):.1f} MB"
+        except (FileNotFoundError, OSError):
+            return ""
+
 
 class JobApproval(models.Model):
     """
@@ -263,6 +296,8 @@ class JobApproval(models.Model):
         default=False,
         help_text="True if customer approved directly (Phase 2); False if staff recorded",
     )
+    approved_by_name = models.CharField(max_length=100, blank=True, verbose_name="ชื่อลูกค้า")
+    approved_by_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP ลูกค้า")
 
     class Meta:
         verbose_name = "การอนุมัติ"

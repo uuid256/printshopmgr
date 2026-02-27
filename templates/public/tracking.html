@@ -10,13 +10,28 @@
   <style> body { font-family: 'Sarabun', sans-serif; } </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
-  <div class="max-w-lg mx-auto px-4 py-8">
+  <div class="max-w-lg mx-auto px-4 py-8 space-y-4">
 
     <div class="text-center mb-6">
       <span class="text-3xl">🖨️</span>
       <h1 class="text-xl font-bold mt-2">ติดตามงานของคุณ</h1>
     </div>
 
+    <!-- Confirmation messages -->
+    {% if approved %}
+    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+      <p class="text-green-800 font-semibold">✅ อนุมัติแบบเรียบร้อยแล้ว!</p>
+      <p class="text-green-700 text-sm mt-1">ร้านพิมพ์จะดำเนินการต่อทันที</p>
+    </div>
+    {% endif %}
+    {% if revised %}
+    <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+      <p class="text-orange-800 font-semibold">✏️ ส่งคำขอแก้ไขแล้ว!</p>
+      <p class="text-orange-700 text-sm mt-1">ทีมออกแบบจะติดต่อกลับเร็วๆ นี้</p>
+    </div>
+    {% endif %}
+
+    <!-- Job info card -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
       <div>
         <p class="text-xs text-gray-500">หมายเลขงาน</p>
@@ -38,8 +53,81 @@
       {% endif %}
     </div>
 
+    <!-- Proof image gallery -->
+    {% if proof_files %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <h2 class="text-sm font-semibold text-gray-700 mb-3">ไฟล์ proof ที่ส่งให้</h2>
+      <div class="grid grid-cols-2 gap-2">
+        {% for f in proof_files %}
+        {% if f.is_image %}
+        <a href="{{ f.file.url }}" target="_blank" class="block">
+          <img src="{{ f.file.url }}" alt="proof"
+               class="w-full h-32 object-cover rounded-lg border border-gray-100 hover:opacity-90 transition-opacity">
+        </a>
+        {% else %}
+        <a href="{{ f.file.url }}" target="_blank"
+           class="flex items-center justify-center h-32 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+          <div class="text-center">
+            <span class="text-3xl">📄</span>
+            <p class="text-xs text-gray-600 mt-1 px-2 truncate">{{ f.filename }}</p>
+          </div>
+        </a>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Approval action (only when awaiting_approval) -->
+    {% if job.status == 'awaiting_approval' and not approved and not revised %}
+    <div class="bg-white rounded-xl shadow-sm border border-blue-100 p-5" x-data="{ showRevision: false }">
+      <h2 class="text-sm font-semibold text-gray-700 mb-1">กรุณาตรวจสอบ proof และแจ้งผล</h2>
+      <p class="text-xs text-gray-500 mb-4">หากพอใจกับแบบ กด "อนุมัติ" เพื่อดำเนินการต่อ<br>
+        หากต้องการแก้ไข กด "ขอแก้ไข" และระบุรายละเอียด</p>
+
+      <!-- Approve form -->
+      <form method="post" action="{% url 'public:approve' job.tracking_token %}" class="mb-3">
+        {% csrf_token %}
+        <input type="text" name="customer_name" placeholder="ชื่อของคุณ (ไม่บังคับ)"
+               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-green-400">
+        <button type="submit"
+                class="w-full bg-green-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+          ✅ อนุมัติแบบนี้
+        </button>
+      </form>
+
+      <!-- Toggle revision form -->
+      <script>
+        function toggleRevision() {
+          const form = document.getElementById('revision-form');
+          form.classList.toggle('hidden');
+        }
+      </script>
+      <button type="button" onclick="toggleRevision()"
+              class="w-full border border-orange-300 text-orange-700 py-2 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors">
+        ✏️ ขอแก้ไข
+      </button>
+
+      <!-- Revision form (hidden by default) -->
+      <div id="revision-form" class="hidden mt-3 pt-3 border-t border-gray-100">
+        <form method="post" action="{% url 'public:revision' job.tracking_token %}">
+          {% csrf_token %}
+          <input type="text" name="customer_name" placeholder="ชื่อของคุณ (ไม่บังคับ)"
+                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-orange-400">
+          <textarea name="notes" rows="3" placeholder="ระบุรายละเอียดที่ต้องการแก้ไข..." required
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"></textarea>
+          <button type="submit"
+                  class="w-full bg-orange-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+            ส่งคำขอแก้ไข
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Status history -->
     {% if history %}
-    <div class="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
       <h2 class="text-sm font-semibold text-gray-700 mb-3">ความเคลื่อนไหวล่าสุด</h2>
       <ul class="space-y-2">
         {% for h in history %}

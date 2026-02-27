@@ -1,6 +1,7 @@
-"""Job views — list, create wizard, detail, status transitions."""
+"""Job views — list, create wizard, detail, status transitions, file uploads, kanban."""
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -8,7 +9,7 @@ from django.utils import timezone
 from accounts.mixins import role_required
 from accounts.models import Role
 
-from .models import Job, JobStatus
+from .models import Job, JobFile, JobStatus
 
 
 @login_required
@@ -87,8 +88,119 @@ def job_update_status(request, pk):
     except ValueError as e:
         return HttpResponse(str(e), status=400)
 
+    from django.conf import settings as django_settings
+    if getattr(django_settings, "LINE_CHANNEL_ACCESS_TOKEN", ""):
+        try:
+            from notifications.service import send_status_notification
+            send_status_notification(job)
+        except Exception:
+            pass
+
     # Return updated status badge partial for HTMX swap
     return render(request, "jobs/partials/status_badge.html", {"job": job})
+
+
+@login_required
+def job_file_upload(request, pk):
+    """HTMX endpoint: upload a file to a job. Returns file_card partial."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    job = get_object_or_404(Job, pk=pk)
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        return HttpResponse("ไม่พบไฟล์", status=400)
+
+    if uploaded_file.size > 20 * 1024 * 1024:
+        return HttpResponse("ไฟล์ใหญ่เกิน 20 MB", status=400)
+
+    allowed_content_types = {
+        "image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf",
+    }
+    if uploaded_file.content_type not in allowed_content_types:
+        return HttpResponse("ประเภทไฟล์ไม่รองรับ (รองรับ image/*, PDF)", status=400)
+
+    file_type = request.POST.get("file_type", JobFile.FileType.ARTWORK)
+    job_file = JobFile.objects.create(
+        job=job,
+        file=uploaded_file,
+        file_type=file_type,
+        uploaded_by=request.user,
+        notes=request.POST.get("notes", ""),
+    )
+
+    if file_type == JobFile.FileType.PROOF:
+        from django.conf import settings as django_settings
+        if getattr(django_settings, "LINE_CHANNEL_ACCESS_TOKEN", ""):
+            try:
+                from notifications.service import send_proof_ready_notification
+                send_proof_ready_notification(job)
+            except Exception:
+                pass
+
+    return render(request, "jobs/partials/file_card.html", {"file": job_file, "job": job})
+
+
+@login_required
+def job_file_delete(request, pk, file_pk):
+    """HTMX endpoint: delete a file. Returns empty 200 so HTMX removes the card."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    job = get_object_or_404(Job, pk=pk)
+    job_file = get_object_or_404(JobFile, pk=file_pk, job=job)
+
+    if request.user != job_file.uploaded_by and not request.user.has_any_role(
+        Role.OWNER, Role.COUNTER
+    ):
+        raise PermissionDenied
+
+    job_file.file.delete(save=False)
+    job_file.delete()
+    return HttpResponse("")
+
+
+@role_required(Role.DESIGNER, Role.COUNTER, Role.OWNER)
+def design_kanban(request):
+    """Designer Kanban board — 3 columns: designing, awaiting_approval, revision."""
+    kanban_statuses = [JobStatus.DESIGNING, JobStatus.AWAITING_APPROVAL, JobStatus.REVISION]
+
+    jobs_qs = (
+        Job.objects.filter(status__in=kanban_statuses)
+        .select_related("customer", "assigned_designer")
+        .prefetch_related("files")
+        .order_by("due_date", "created_at")
+    )
+
+    if request.user.role == Role.DESIGNER:
+        jobs_qs = jobs_qs.filter(assigned_designer=request.user)
+
+    columns_map = {s: [] for s in kanban_statuses}
+    for job in jobs_qs:
+        columns_map[job.status].append(job)
+
+    columns = [
+        {
+            "status": JobStatus.DESIGNING,
+            "label": JobStatus.DESIGNING.label,
+            "jobs": columns_map[JobStatus.DESIGNING],
+            "color": "blue",
+        },
+        {
+            "status": JobStatus.AWAITING_APPROVAL,
+            "label": JobStatus.AWAITING_APPROVAL.label,
+            "jobs": columns_map[JobStatus.AWAITING_APPROVAL],
+            "color": "yellow",
+        },
+        {
+            "status": JobStatus.REVISION,
+            "label": JobStatus.REVISION.label,
+            "jobs": columns_map[JobStatus.REVISION],
+            "color": "orange",
+        },
+    ]
+
+    return render(request, "jobs/kanban.html", {"columns": columns, "today": timezone.localdate()})
 
 
 @login_required

@@ -16,6 +16,7 @@ urlpatterns = [
     path("production/", include("production.urls")),
     path("dashboard/", include("dashboard.urls")),
     path("track/", include("public.urls")),
+    path("notifications/", include("notifications.urls")),
     path("", lambda request: redirect("dashboard:home")),  # root → dashboard
 ]
 

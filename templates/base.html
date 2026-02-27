@@ -67,6 +67,14 @@
           <span>➕</span> รับงานใหม่
         </a>
 
+        {% if request.user.is_designer or request.user.is_owner or request.user.is_counter %}
+        <a href="{% url 'jobs:kanban' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'jobs' and url_name == 'kanban' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>🎨</span> Kanban ออกแบบ
+        </a>
+        {% endif %}
+
         <a href="{% url 'customers:list' %}"
            class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
                   {% if app == 'customers' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">

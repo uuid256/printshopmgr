@@ -14,6 +14,7 @@ dependencies = [
     "django-storages>=1.14",
     "line-bot-sdk>=3.11",
     "django-celery-beat>=2.7",
+    "requests>=2.32",
 ]
 
 [dependency-groups]

@@ -789,91 +789,87 @@ Detailed ASCII wireframes are provided in separate files:
 
 ## 11. Phased Delivery Plan
 
-### Phase 1: Core Foundation (Week 1-4)
+> **Implementation note:** The delivery was grouped into 4 implementation phases that do not map 1:1 to the PRD phases below. The tables are updated with ✅ (built), ⚠️ (partial), and — (not yet built) to reflect the current state of the codebase.
+
+### Phase 1: Core Foundation
 
 **Goal:** Replace basic job management with proper status tracking
 
-| Feature | Priority | Estimate |
+| Feature | Priority | Built? |
 |---|---|---|
-| User authentication + RBAC (6 roles) | P0 | 3 days |
-| Job CRUD with 12-status flow | P0 | 5 days |
-| Job search (by number, name, customer, phone) | P0 | 2 days |
-| Customer CRUD (individual + corporate) | P0 | 3 days |
-| Job status timeline view | P0 | 2 days |
-| Job QR code generation | P1 | 1 day |
-| Mobile-responsive layout | P0 | 3 days |
-| Database migration from existing system | P0 | 3 days |
+| User authentication + RBAC (5 staff roles + customer external) | P0 | ✅ |
+| Job CRUD with 12-status flow + transition enforcement | P0 | ✅ |
+| Job search / list / filter | P0 | ⚠️ basic list; no full-text search |
+| Customer CRUD (individual + corporate) with live autocomplete | P0 | ✅ |
+| Job status timeline view (status history) | P0 | ✅ |
+| Job QR code generation (printable job slip) | P1 | — |
+| Mobile-responsive layout (Tailwind) | P0 | ✅ |
+| Database migration from existing system | P0 | — (fresh start) |
 
-**Deliverable:** Working system with job tracking, status flow, and role-based access.
-
-### Phase 2: Billing & Documents (Week 5-8)
+### Phase 2: Billing & Documents
 
 **Goal:** Proper financial tracking and Thai tax document generation
 
-| Feature | Priority | Estimate |
+| Feature | Priority | Built? |
 |---|---|---|
-| Auto-pricing engine | P0 | 3 days |
-| Payment recording (full, deposit, credit) | P0 | 3 days |
-| PromptPay QR generation | P1 | 2 days |
-| Quotation generation (PDF) | P1 | 2 days |
-| Tax Invoice generation (PDF) | P0 | 3 days |
-| Receipt generation (PDF) | P0 | 2 days |
-| Outstanding payment list + aging | P0 | 3 days |
-| Monthly statement generation | P1 | 2 days |
-| WHT recording | P1 | 1 day |
-| Thai baht text converter | P0 | 1 day |
+| Pricing fields per job (quoted price, deposit, discount) | P0 | ✅ |
+| Payment recording — full, deposit, WHT; PromptPay QR | P0 | ✅ |
+| Quotation PDF (WeasyPrint, Buddhist Era dates, baht text) | P1 | ✅ |
+| Tax Invoice PDF (Thai Revenue Dept compliant) | P0 | ✅ |
+| Receipt PDF | P0 | ✅ |
+| Credit Note PDF | P1 | ✅ |
+| Outstanding payment list + aging report | P0 | ✅ |
+| VAT report — output tax (ภ.พ.30 compatible) | P0 | ✅ |
+| Monthly statement generation | P1 | — |
+| Thai baht text (ตัวอักษร) converter | P0 | ✅ |
 
-**Deliverable:** Complete billing system with Thai-compliant tax documents.
-
-### Phase 3: Communication (Week 9-12)
+### Phase 3: Communication
 
 **Goal:** Automated customer communication via LINE
 
-| Feature | Priority | Estimate |
+| Feature | Priority | Built? |
 |---|---|---|
-| LINE OA integration (push messages) | P0 | 3 days |
-| Auto-notification on status change | P0 | 2 days |
-| Design proof approval via LINE | P0 | 3 days |
-| Customer tracking page (public URL) | P0 | 3 days |
-| Payment reminder (auto-schedule) | P1 | 2 days |
-| Satisfaction survey via LINE | P2 | 2 days |
-| Delivery notification with tracking | P1 | 1 day |
-| Internal notification center | P1 | 2 days |
+| LINE OA integration (push messages via Messaging API) | P0 | ✅ |
+| Auto-notification on status change | P0 | ✅ |
+| Design proof upload + approval via LINE / public page | P0 | ✅ |
+| Customer tracking page (public UUID URL, no login) | P0 | ✅ |
+| Payment reminder — auto-scheduled Celery task | P1 | ✅ |
+| Approval reminder — auto-scheduled Celery task | P1 | ✅ |
+| Daily summary — auto-scheduled to owner (LINE + email) | P1 | ✅ |
+| Low-stock material alert — auto-scheduled Celery task | P1 | ✅ |
+| Satisfaction survey via LINE | P2 | — |
+| Internal in-app notification center | P1 | — |
 
-**Deliverable:** Customers receive automatic updates, can approve designs via LINE.
+### Phase 4: Intelligence
 
-### Phase 4: Intelligence (Week 13-16)
+**Goal:** Owner gets full business visibility and automation controls
 
-**Goal:** Owner gets full business visibility
-
-| Feature | Priority | Estimate |
+| Feature | Priority | Built? |
 |---|---|---|
-| Owner dashboard (revenue, pipeline, alerts) | P0 | 5 days |
-| Design queue Kanban (drag-drop) | P1 | 3 days |
-| Revenue reports (by period, product, channel) | P0 | 3 days |
-| Staff performance dashboard | P2 | 3 days |
-| Daily summary auto-generation | P1 | 2 days |
-| Tax reports (output/input VAT, ภ.พ.30 summary) | P0 | 3 days |
-| Export to Excel | P1 | 2 days |
+| Owner dashboard (revenue, pipeline, overdue alerts) | P0 | ✅ |
+| Designer Kanban (drag-drop via Sortable.js + HTMX) | P1 | ✅ |
+| Revenue reports (by period, product, channel) | P0 | — |
+| Staff performance dashboard | P2 | — |
+| Tax reports — output VAT (ภ.พ.30) | P0 | ✅ |
+| Celery Beat scheduler (django-celery-beat, DB scheduler) | P1 | ✅ |
+| Notification settings page — email/LINE kill switches, thresholds | P1 | ✅ |
+| LINE Login OAuth for staff accounts | P1 | ✅ |
+| Export to Excel | P1 | — |
 
-**Deliverable:** Owner can manage business from dashboard and phone.
+### Remaining / Future Work
 
-### Phase 5: Optimization (Week 17-20)
-
-**Goal:** Inventory, performance, and advanced features
-
-| Feature | Priority | Estimate |
-|---|---|---|
-| Material/inventory tracking | P1 | 3 days |
-| Low stock alerts | P1 | 1 day |
-| Material usage per job | P2 | 2 days |
-| Customer discount codes | P2 | 2 days |
-| Reorder from past job | P1 | 2 days |
-| Batch operations (billing, reminders) | P1 | 3 days |
-| Accounting export (CSV for PEAK/FlowAccount) | P2 | 2 days |
-| System settings UI | P1 | 2 days |
-
-**Deliverable:** Fully operational system with all features.
+| Feature | Priority |
+|---|---|
+| Job QR code → printable job slip (A5) | P1 |
+| Full-text job search | P1 |
+| Monthly statement generation for credit customers | P1 |
+| Revenue report (by period, product type, channel) | P0 |
+| Staff performance report | P2 |
+| Satisfaction survey via LINE post-completion | P2 |
+| In-app notification center (bell icon) | P1 |
+| Accounting export (CSV for PEAK / FlowAccount) | P2 |
+| Export to Excel (aging, payments, VAT) | P1 |
+| Reorder from past job | P1 |
 
 ---
 

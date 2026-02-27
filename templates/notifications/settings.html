@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}ตั้งค่าแจ้งเตือน — Print Shop{% endblock %}
+
+{% block breadcrumb %}ตั้งค่าแจ้งเตือน{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <h1 class="text-xl font-semibold text-gray-900">ตั้งค่าการแจ้งเตือน</h1>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- Email section -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-800 mb-4">อีเมล</h2>
+
+      <div class="flex items-center gap-4 mb-4">
+        <span class="text-sm text-gray-700 w-32">สถานะ</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="notification_email_enabled" value="1"
+                 {% if s.notification_email_enabled == "1" %}checked{% endif %}
+                 class="text-indigo-600">
+          <span class="text-sm text-green-700 font-medium">เปิด</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="notification_email_enabled" value="0"
+                 {% if s.notification_email_enabled != "1" %}checked{% endif %}
+                 class="text-indigo-600">
+          <span class="text-sm text-red-700 font-medium">ปิด</span>
+        </label>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm text-gray-700 mb-1">อีเมลผู้รับ (เจ้าของ/แอดมิน)</label>
+        <input type="email" name="notification_email_recipient"
+               value="{{ s.notification_email_recipient }}"
+               placeholder="owner@example.com"
+               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <p class="text-xs text-gray-500 mt-1">รับสรุปประจำวัน แจ้งเตือนวัสดุใกล้หมด</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="button"
+                hx-post="{% url 'notifications:test_email' %}"
+                hx-target="#email-test-result"
+                hx-swap="innerHTML"
+                class="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md border border-gray-300 transition-colors">
+          ส่งอีเมลทดสอบ
+        </button>
+        <span id="email-test-result"></span>
+      </div>
+
+      <p class="text-xs text-gray-400 mt-3">
+        ตั้งค่า SMTP ใน <code>.env</code>: EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+      </p>
+    </div>
+
+    <!-- LINE customers section -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-800 mb-4">LINE (ลูกค้า)</h2>
+
+      <div class="flex items-center gap-4 mb-4">
+        <span class="text-sm text-gray-700 w-32">สถานะ</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="notification_line_enabled" value="1"
+                 {% if s.notification_line_enabled == "1" %}checked{% endif %}
+                 class="text-indigo-600">
+          <span class="text-sm text-green-700 font-medium">เปิด</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="notification_line_enabled" value="0"
+                 {% if s.notification_line_enabled != "1" %}checked{% endif %}
+                 class="text-indigo-600">
+          <span class="text-sm text-red-700 font-medium">ปิด</span>
+        </label>
+      </div>
+
+      <p class="text-sm text-gray-600">
+        ลูกค้าที่เชื่อมต่อ LINE Bot:
+        <span class="font-semibold text-indigo-700">{{ line_customer_count }} ราย</span>
+      </p>
+      <p class="text-xs text-gray-400 mt-1">
+        ลูกค้าเชื่อมต่อโดยการ Follow LINE Official Account ของร้าน
+      </p>
+    </div>
+
+    <!-- LINE staff section -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-800 mb-4">LINE (เจ้าหน้าที่ — บัญชีของคุณ)</h2>
+
+      {% if request.user.line_user_id %}
+        <div class="flex items-center gap-3 mb-3">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            <span>✓</span> เชื่อมต่อแล้ว: {{ request.user.line_display_name|default:request.user.line_user_id }}
+          </span>
+        </div>
+        <form method="post" action="{% url 'accounts:line_disconnect' %}" class="inline">
+          {% csrf_token %}
+          <button type="submit"
+                  class="px-3 py-1.5 text-sm text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 rounded-md transition-colors">
+            ยกเลิกการเชื่อมต่อ
+          </button>
+        </form>
+      {% else %}
+        <p class="text-sm text-gray-600 mb-3">ยังไม่ได้เชื่อมต่อ LINE — เชื่อมต่อเพื่อรับแจ้งเตือนสรุปประจำวันและวัสดุใกล้หมด</p>
+        <a href="{% url 'accounts:line_login' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-md transition-colors">
+          <span>📱</span> เชื่อมต่อ LINE
+        </a>
+        {% if not request.user.is_owner %}
+          <p class="text-xs text-gray-400 mt-2">เฉพาะเจ้าของร้านที่จะได้รับแจ้งเตือน LINE สรุปประจำวัน</p>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- Task thresholds -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <h2 class="text-base font-semibold text-gray-800 mb-4">เกณฑ์การแจ้งเตือน</h2>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-700 mb-1">
+            แจ้งเตือนชำระเงินหลังครบกำหนด (วัน)
+          </label>
+          <input type="number" name="payment_reminder_days"
+                 value="{{ s.payment_reminder_days }}" min="0" max="30"
+                 class="w-24 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <p class="text-xs text-gray-500 mt-1">ระบบจะส่งแจ้งเตือนให้ลูกค้าหลังวันครบกำหนดชำระ N วัน</p>
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-700 mb-1">
+            แจ้งเตือนรออนุมัติแบบ (วัน)
+          </label>
+          <input type="number" name="approval_reminder_days"
+                 value="{{ s.approval_reminder_days }}" min="1" max="30"
+                 class="w-24 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <p class="text-xs text-gray-500 mt-1">ส่งแจ้งเตือนซ้ำถ้างานค้างอยู่ที่ "รอลูกค้าอนุมัติ" นาน N วัน</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end">
+      <button type="submit"
+              class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors">
+        บันทึก
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

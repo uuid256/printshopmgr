@@ -34,7 +34,12 @@ class User(AbstractUser):
         max_length=50,
         blank=True,
         verbose_name="LINE User ID",
-        help_text="For Phase 2 LINE notifications",
+        help_text="Populated via LINE Login OAuth (Phase 4)",
+    )
+    line_display_name = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="LINE Display Name",
     )
 
     class Meta:

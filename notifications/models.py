@@ -38,6 +38,8 @@ class NotificationLog(models.Model):
         STATUS_CHANGE = "status_change", "เปลี่ยนสถานะ"
         PROOF_READY = "proof_ready", "proof พร้อม"
         APPROVAL_REMINDER = "approval_reminder", "แจ้งเตือนอนุมัติ"
+        PAYMENT_REMINDER = "payment_reminder", "แจ้งเตือนชำระเงิน"
+        DAILY_SUMMARY = "daily_summary", "สรุปประจำวัน"
 
     job = models.ForeignKey(
         "jobs.Job",

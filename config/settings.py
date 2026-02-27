@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "storages",
+    "django_celery_beat",
     # Local apps
     "accounts",
     "customers",
@@ -126,6 +127,46 @@ CELERY_TIMEZONE = TIME_ZONE
 # LINE Messaging API (Phase 2)
 LINE_CHANNEL_ACCESS_TOKEN = env("LINE_CHANNEL_ACCESS_TOKEN", default="")
 LINE_CHANNEL_SECRET = env("LINE_CHANNEL_SECRET", default="")
+
+# LINE Login OAuth (Phase 4 — staff LINE connect)
+LINE_LOGIN_CHANNEL_ID = env("LINE_LOGIN_CHANNEL_ID", default="")
+LINE_LOGIN_CHANNEL_SECRET = env("LINE_LOGIN_CHANNEL_SECRET", default="")
+
+# Email (from .env, all optional — use console backend for local dev)
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@printshop.local")
+
+# Base URL used in notification messages (e.g. tracking links in LINE messages)
+BASE_URL = env("BASE_URL", default="http://localhost:8000")
+
+# Celery Beat — use DB scheduler so schedules are editable from Django Admin
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    "daily-summary": {
+        "task": "notifications.tasks.send_daily_summary",
+        "schedule": crontab(hour=8, minute=0),
+    },
+    "payment-reminders": {
+        "task": "notifications.tasks.send_payment_reminders",
+        "schedule": crontab(hour=9, minute=0),
+    },
+    "material-alerts": {
+        "task": "notifications.tasks.send_material_alerts",
+        "schedule": crontab(hour=9, minute=5),
+    },
+    "approval-reminders": {
+        "task": "notifications.tasks.send_approval_reminders",
+        "schedule": crontab(hour=10, minute=0),
+    },
+}
 
 # django-unfold Admin customisation
 UNFOLD = {

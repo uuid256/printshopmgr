@@ -31,6 +31,31 @@ services:
   redis:
     image: redis:7-alpine
 
+  celery:
+    build: .
+    command: uv run celery -A config worker -l info
+    volumes:
+      - .:/app
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+
+  celery-beat:
+    build: .
+    command: uv run celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file: .env
+
 volumes:
   postgres_data:
   media_files:

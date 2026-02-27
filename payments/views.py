@@ -27,6 +27,9 @@ def payment_screen(request, job_id):
         bank_account_id = request.POST.get("bank_account") or None
         reference = request.POST.get("reference_number", "")
         is_deposit = request.POST.get("is_deposit") == "true"
+        wht_rate = request.POST.get("wht_rate", "0") or "0"
+        wht_amount = request.POST.get("wht_amount", "0") or "0"
+        wht_certificate = request.POST.get("wht_certificate", "")
 
         Payment.objects.create(
             job=job,
@@ -37,6 +40,9 @@ def payment_screen(request, job_id):
             is_deposit=is_deposit,
             received_by=request.user,
             notes=request.POST.get("notes", ""),
+            wht_rate=wht_rate,
+            wht_amount=wht_amount,
+            wht_certificate=wht_certificate,
         )
         return redirect("payments:pay", job_id=job_id)
 

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}รายงาน VAT — Print Shop Manager{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'documents:list' %}" class="hover:text-indigo-600">เอกสาร</a>
+  <span class="mx-1 text-gray-400">/</span> รายงาน VAT
+{% endblock %}
+
+{% block header_actions %}
+<button onclick="window.print()"
+        class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+  🖨 พิมพ์
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Month navigation -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-4 flex items-center justify-between">
+    <a href="?month={{ prev_month }}&year={{ prev_year }}"
+       class="flex items-center gap-1 text-sm text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+      ← เดือนก่อน
+    </a>
+    <div class="text-center">
+      <p class="text-base font-semibold text-gray-900">
+        {{ month_name }} {{ year }}
+      </p>
+      <a href="{% url 'documents:vat_report' %}"
+         class="text-xs text-indigo-600 hover:underline">เดือนปัจจุบัน</a>
+    </div>
+    <a href="?month={{ next_month }}&year={{ next_year }}"
+       class="flex items-center gap-1 text-sm text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+      เดือนถัดไป →
+    </a>
+  </div>
+
+  <!-- Summary -->
+  {% if totals.total_amount %}
+  <div class="grid grid-cols-3 gap-3">
+    <div class="bg-white border border-gray-100 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-gray-500 mb-1">ยอดก่อน VAT</p>
+      <p class="text-lg font-bold text-gray-900">{{ totals.total_subtotal|baht }}</p>
+    </div>
+    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-indigo-600 mb-1">VAT 7%</p>
+      <p class="text-lg font-bold text-indigo-700">{{ totals.total_vat|baht }}</p>
+    </div>
+    <div class="bg-white border border-gray-100 rounded-xl p-4 text-center shadow-sm">
+      <p class="text-xs text-gray-500 mb-1">ยอดรวม (VAT included)</p>
+      <p class="text-lg font-bold text-gray-900">{{ totals.total_amount|baht }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-500 uppercase border-b border-gray-100 bg-gray-50">
+          <th class="text-left px-4 py-3">เลขที่</th>
+          <th class="text-left px-4 py-3">วันที่</th>
+          <th class="text-left px-4 py-3">ชื่อลูกค้า</th>
+          <th class="text-left px-4 py-3 hidden md:table-cell">เลขผู้เสียภาษี</th>
+          <th class="text-right px-4 py-3">ยอดก่อน VAT</th>
+          <th class="text-right px-4 py-3">VAT 7%</th>
+          <th class="text-right px-4 py-3">ยอดรวม</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for doc in docs %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-mono text-xs">
+            <a href="{% url 'documents:pdf' doc.pk %}" class="text-indigo-600 hover:underline" target="_blank">
+              {{ doc.document_number }}
+            </a>
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ doc.issued_at|thai_date_short }}</td>
+          <td class="px-4 py-3 text-gray-900 font-medium">{{ doc.customer_name }}</td>
+          <td class="px-4 py-3 text-gray-500 font-mono text-xs hidden md:table-cell">
+            {{ doc.customer_tax_id|default:"—" }}
+          </td>
+          <td class="px-4 py-3 text-right text-gray-700">{{ doc.subtotal|baht }}</td>
+          <td class="px-4 py-3 text-right text-indigo-600">{{ doc.vat_amount|baht }}</td>
+          <td class="px-4 py-3 text-right font-semibold">{{ doc.total_amount|baht }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-10 text-center text-gray-400 text-sm">
+            ไม่มีใบกำกับภาษีในเดือนนี้
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if docs %}
+      <tfoot>
+        <tr class="border-t-2 border-gray-200 bg-gray-50 font-semibold">
+          <td colspan="4" class="px-4 py-3 text-gray-700">รวม</td>
+          <td class="px-4 py-3 text-right">{{ totals.total_subtotal|baht }}</td>
+          <td class="px-4 py-3 text-right text-indigo-600">{{ totals.total_vat|baht }}</td>
+          <td class="px-4 py-3 text-right text-gray-900">{{ totals.total_amount|baht }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+</div>
+{% endblock %}

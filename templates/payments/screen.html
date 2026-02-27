@@ -21,10 +21,10 @@
 
         <!-- Amount -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนเงิน (บาท)</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนเงินที่รับ (บาท)</label>
           <input type="number" name="amount" step="0.01" min="0.01"
                  :value="amount"
-                 @input="amount = $event.target.value; updateQR()"
+                 @input="amount = $event.target.value; calcWht(); updateQR()"
                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right font-mono text-lg"
                  placeholder="0.00" required>
           <div class="flex gap-2 mt-2">
@@ -93,6 +93,48 @@
           <label for="is_deposit" class="text-sm text-gray-700">เป็นการชำระมัดจำ</label>
         </div>
 
+        <!-- WHT (Withholding Tax) collapsible section -->
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <button type="button" @click="whtOpen = !whtOpen"
+                  class="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+            <span>หักภาษี ณ ที่จ่าย (WHT)</span>
+            <span x-text="whtOpen ? '▲' : '▼'" class="text-xs text-gray-400"></span>
+          </button>
+          <div x-show="whtOpen" x-cloak class="p-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">อัตรา WHT (%)</label>
+                <select x-model="whtRate" @change="calcWht()"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="0">ไม่หัก (0%)</option>
+                  <option value="1">1%</option>
+                  <option value="1.5">1.5%</option>
+                  <option value="3">3%</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">จำนวน WHT (บาท)</label>
+                <input type="text" readonly :value="whtAmountDisplay"
+                       class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700 font-mono text-right">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">เลขที่หนังสือรับรอง WHT</label>
+              <input type="text" x-model="whtCertificate"
+                     placeholder="เลขที่ (ถ้ามี)"
+                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex justify-between text-sm bg-indigo-50 rounded-lg px-4 py-2">
+              <span class="text-gray-600">ยอดที่รับจริง (สุทธิ)</span>
+              <span class="font-semibold text-indigo-700" x-text="netPayableDisplay"></span>
+            </div>
+            <!-- Hidden inputs submitted with form -->
+            <input type="hidden" name="wht_rate" :value="whtRate">
+            <input type="hidden" name="wht_amount" :value="whtAmount">
+            <input type="hidden" name="wht_certificate" :value="whtCertificate">
+          </div>
+        </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
           <input type="text" name="notes" placeholder="(ไม่บังคับ)"
@@ -135,13 +177,22 @@
       <h3 class="text-sm font-semibold text-gray-700 mb-3">ประวัติชำระ</h3>
       <div class="space-y-2">
         {% for payment in existing_payments %}
-        <div class="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 last:border-0">
-          <div>
-            <span class="font-medium text-gray-900">{{ payment.amount|baht }}</span>
-            <span class="text-gray-500 ml-2">{{ payment.get_method_display }}</span>
-            {% if payment.is_deposit %}<span class="ml-1 text-xs text-blue-600">(มัดจำ)</span>{% endif %}
+        <div class="text-sm py-1.5 border-b border-gray-50 last:border-0">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-medium text-gray-900">{{ payment.amount|baht }}</span>
+              <span class="text-gray-500 ml-2">{{ payment.get_method_display }}</span>
+              {% if payment.is_deposit %}<span class="ml-1 text-xs text-blue-600">(มัดจำ)</span>{% endif %}
+            </div>
+            <span class="text-xs text-gray-400">{{ payment.received_at|thai_date_short }}</span>
           </div>
-          <span class="text-xs text-gray-400">{{ payment.received_at|thai_date_short }}</span>
+          {% if payment.wht_amount %}
+          <div class="flex items-center justify-between mt-0.5 text-xs text-gray-500">
+            <span>WHT {{ payment.wht_rate }}% = {{ payment.wht_amount|baht }}
+              {% if payment.wht_certificate %}({{ payment.wht_certificate }}){% endif %}
+            </span>
+          </div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
@@ -158,11 +209,34 @@ function paymentForm() {
   return {
     method: 'cash',
     amount: '{{ job.balance_due }}',
+    whtOpen: false,
+    whtRate: '0',
+    whtAmount: 0,
+    whtCertificate: '',
+    get whtAmountDisplay() {
+      return '฿' + parseFloat(this.whtAmount || 0).toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    },
+    get netPayableDisplay() {
+      const net = parseFloat(this.amount || 0) - parseFloat(this.whtAmount || 0);
+      return '฿' + net.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    },
     init() {},
     setAmount(v) {
       this.amount = v;
       document.querySelector('[name=amount]').value = v;
+      this.calcWht();
       this.updateQR();
+    },
+    calcWht() {
+      const rate = parseFloat(this.whtRate || 0);
+      const total = parseFloat(this.amount || 0);
+      if (rate > 0 && total > 0) {
+        // WHT is calculated on the pre-VAT base: base = total / 1.07
+        const base = total / 1.07;
+        this.whtAmount = Math.round(base * rate / 100 * 100) / 100;
+      } else {
+        this.whtAmount = 0;
+      }
     },
     updateQR() {
       if (this.method === 'promptpay') {

@@ -154,7 +154,12 @@ class Job(models.Model):
 
     @property
     def total_paid(self):
-        return self.payments.aggregate(total=models.Sum("amount"))["total"] or 0
+        from decimal import Decimal
+
+        from django.db.models import F, Sum
+
+        result = self.payments.aggregate(total=Sum(F("amount") + F("wht_amount")))["total"]
+        return result or Decimal("0")
 
     @property
     def balance_due(self):

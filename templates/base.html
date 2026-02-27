@@ -89,9 +89,23 @@
 
         <a href="{% url 'documents:list' %}"
            class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
-                  {% if app == 'documents' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+                  {% if app == 'documents' and url_name == 'list' or app == 'documents' and url_name == 'detail' or app == 'documents' and url_name == 'pdf' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
           <span>📄</span> เอกสาร
         </a>
+
+        {% if request.user.is_owner or request.user.is_accountant %}
+        <div class="border-t border-indigo-800 my-2"></div>
+        <a href="{% url 'documents:aging' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'documents' and url_name == 'aging' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>📊</span> รายงานอายุหนี้
+        </a>
+        <a href="{% url 'documents:vat_report' %}"
+           class="flex items-center gap-2 px-3 py-2 mb-0.5 rounded-md text-sm font-medium transition-colors
+                  {% if app == 'documents' and url_name == 'vat_report' %}bg-indigo-700 text-white{% else %}text-indigo-200 hover:bg-indigo-800 hover:text-white{% endif %}">
+          <span>🧾</span> รายงาน VAT
+        </a>
+        {% endif %}
 
         {% if request.user.is_owner or request.user.is_staff %}
         <div class="border-t border-indigo-800 my-2"></div>

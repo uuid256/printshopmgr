@@ -260,21 +260,43 @@
     <!-- Documents -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
       <h3 class="text-sm font-semibold text-gray-700 mb-3">เอกสาร</h3>
-      {% for doc in job.documents.filter %}{% endfor %}
       <div class="space-y-2">
         {% for doc in job.documents.all %}
         <div class="flex items-center justify-between text-sm">
-          <span class="text-gray-700 font-mono text-xs">{{ doc.document_number }}</span>
-          <a href="{% url 'documents:pdf' doc.pk %}"
-             class="text-indigo-600 hover:underline text-xs" target="_blank">PDF</a>
+          <div class="flex items-center gap-1 min-w-0">
+            <span class="text-gray-700 font-mono text-xs truncate">{{ doc.document_number }}</span>
+            {% if doc.is_void %}<span class="text-xs text-red-500">(ยกเลิก)</span>{% endif %}
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <a href="{% url 'documents:pdf' doc.pk %}"
+               class="text-indigo-600 hover:underline text-xs" target="_blank">PDF</a>
+            {% if request.user.is_owner and not doc.is_void %}
+            <form method="post" action="{% url 'documents:void' doc.pk %}"
+                  onsubmit="return confirm('ยืนยันการยกเลิกเอกสาร {{ doc.document_number }}?')">
+              {% csrf_token %}
+              <button type="submit" class="text-xs text-red-500 hover:text-red-700">ยกเลิก</button>
+            </form>
+            {% endif %}
+          </div>
         </div>
         {% empty %}
         <p class="text-xs text-gray-400">ยังไม่มีเอกสาร</p>
         {% endfor %}
-        <a href="{% url 'documents:create_quotation' job.pk %}"
-           class="mt-2 flex items-center justify-center gap-1 w-full border border-gray-200 text-gray-600 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
-          + ออกใบเสนอราคา
-        </a>
+        <div class="flex flex-col gap-1 mt-2">
+          <a href="{% url 'documents:create_quotation' job.pk %}"
+             class="flex items-center justify-center gap-1 w-full border border-gray-200 text-gray-600 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors">
+            + ออกใบเสนอราคา
+          </a>
+          {% if request.user.is_owner or request.user.is_counter %}
+          <form method="post" action="{% url 'documents:create_tax_invoice' job.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-full flex items-center justify-center gap-1 border border-indigo-200 text-indigo-600 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-50 transition-colors">
+              + ออกใบกำกับภาษี
+            </button>
+          </form>
+          {% endif %}
+        </div>
       </div>
     </div>
 

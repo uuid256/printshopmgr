@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}รายงานอายุหนี้ — Print Shop Manager{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'documents:list' %}" class="hover:text-indigo-600">เอกสาร</a>
+  <span class="mx-1 text-gray-400">/</span> รายงานอายุหนี้
+{% endblock %}
+
+{% block header_actions %}
+<button onclick="window.print()"
+        class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+  🖨 พิมพ์
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Bucket summary chips -->
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+      <p class="text-xs text-green-600 font-medium mb-1">ยังไม่เกินกำหนด</p>
+      <p class="text-lg font-bold text-green-700">{{ bucket_totals.current|baht }}</p>
+    </div>
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+      <p class="text-xs text-yellow-600 font-medium mb-1">1–30 วัน</p>
+      <p class="text-lg font-bold text-yellow-700">{{ bucket_totals.1_30|baht }}</p>
+    </div>
+    <div class="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
+      <p class="text-xs text-orange-600 font-medium mb-1">31–60 วัน</p>
+      <p class="text-lg font-bold text-orange-700">{{ bucket_totals.31_60|baht }}</p>
+    </div>
+    <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+      <p class="text-xs text-red-600 font-medium mb-1">61–90 วัน</p>
+      <p class="text-lg font-bold text-red-700">{{ bucket_totals.61_90|baht }}</p>
+    </div>
+    <div class="bg-red-100 border border-red-300 rounded-xl p-4 text-center">
+      <p class="text-xs text-red-700 font-medium mb-1">91+ วัน</p>
+      <p class="text-lg font-bold text-red-800">{{ bucket_totals.91_plus|baht }}</p>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-xs text-gray-500 uppercase border-b border-gray-100 bg-gray-50">
+          <th class="text-left px-4 py-3">ลูกค้า</th>
+          <th class="text-left px-4 py-3 hidden sm:table-cell">เลขที่เอกสาร</th>
+          <th class="text-left px-4 py-3 hidden md:table-cell">วันออก</th>
+          <th class="text-left px-4 py-3 hidden md:table-cell">ครบกำหนด</th>
+          <th class="text-right px-4 py-3">ยอดค้างชำระ</th>
+          <th class="text-right px-4 py-3 hidden sm:table-cell">เกินกำหนด (วัน)</th>
+          <th class="text-center px-4 py-3">กลุ่ม</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for row in rows %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3">
+            <a href="{% url 'jobs:detail' row.job.pk %}" class="font-medium text-indigo-600 hover:underline">
+              {{ row.job.customer.name }}
+            </a>
+            <p class="text-xs text-gray-500 truncate max-w-xs">{{ row.job.title }}</p>
+          </td>
+          <td class="px-4 py-3 font-mono text-xs text-gray-600 hidden sm:table-cell">
+            {% if row.invoice_doc %}
+              <a href="{% url 'documents:pdf' row.invoice_doc.pk %}" class="text-indigo-600 hover:underline" target="_blank">
+                {{ row.invoice_doc.document_number }}
+              </a>
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-600 hidden md:table-cell">{{ row.invoice_date|thai_date_short }}</td>
+          <td class="px-4 py-3 hidden md:table-cell
+            {% if row.days_overdue > 0 %}text-red-600 font-medium{% else %}text-gray-600{% endif %}">
+            {{ row.due_date|thai_date_short }}
+          </td>
+          <td class="px-4 py-3 text-right font-semibold">{{ row.balance|baht }}</td>
+          <td class="px-4 py-3 text-right hidden sm:table-cell
+            {% if row.days_overdue > 90 %}text-red-700 font-bold
+            {% elif row.days_overdue > 60 %}text-red-600
+            {% elif row.days_overdue > 30 %}text-orange-600
+            {% elif row.days_overdue > 0 %}text-yellow-600
+            {% else %}text-green-600{% endif %}">
+            {{ row.days_overdue }}
+          </td>
+          <td class="px-4 py-3 text-center">
+            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium
+              {% if row.bucket == 'current' %}bg-green-100 text-green-700
+              {% elif row.bucket == '1_30' %}bg-yellow-100 text-yellow-700
+              {% elif row.bucket == '31_60' %}bg-orange-100 text-orange-700
+              {% elif row.bucket == '61_90' %}bg-red-100 text-red-700
+              {% else %}bg-red-200 text-red-800{% endif %}">
+              {% if row.bucket == 'current' %}ปัจจุบัน
+              {% elif row.bucket == '1_30' %}1–30 วัน
+              {% elif row.bucket == '31_60' %}31–60 วัน
+              {% elif row.bucket == '61_90' %}61–90 วัน
+              {% else %}91+ วัน{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-10 text-center text-gray-400 text-sm">ไม่มียอดค้างชำระ</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot>
+        <tr class="border-t-2 border-gray-200 bg-gray-50 font-semibold">
+          <td colspan="4" class="px-4 py-3 text-gray-700">รวมทั้งหมด</td>
+          <td class="px-4 py-3 text-right text-gray-900">{{ grand_total|baht }}</td>
+          <td colspan="2" class="px-4 py-3"></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  <p class="text-xs text-gray-400 text-right">ข้อมูล ณ วันที่ {{ today|thai_date_short }}</p>
+</div>
+{% endblock %}

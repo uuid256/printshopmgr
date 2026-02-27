@@ -75,6 +75,18 @@ class Payment(models.Model):
         help_text="Slip number for bank transfer / PromptPay",
     )
     is_deposit = models.BooleanField(default=False, verbose_name="เป็นมัดจำ")
+
+    # WHT (Withholding Tax) — corporate customers deduct WHT from payment
+    wht_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0, verbose_name="อัตรา WHT (%)"
+    )
+    wht_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0, verbose_name="WHT หัก ณ ที่จ่าย"
+    )
+    wht_certificate = models.CharField(
+        max_length=50, blank=True, verbose_name="เลขที่หนังสือรับรอง WHT"
+    )
+
     received_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

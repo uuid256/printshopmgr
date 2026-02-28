@@ -14,6 +14,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',8000)); s.close()\" 2>/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
 
   db:
     image: postgres:16-alpine
@@ -40,7 +46,7 @@ services:
       - venv:/app/.venv
       - media_files:/app/media
     depends_on:
-      db:
+      web:
         condition: service_healthy
       redis:
         condition: service_started
@@ -53,7 +59,7 @@ services:
       - .:/app
       - venv:/app/.venv
     depends_on:
-      db:
+      web:
         condition: service_healthy
       redis:
         condition: service_started

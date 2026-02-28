@@ -53,56 +53,69 @@ Job management system for Thai print shops.
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [uv](https://docs.astral.sh/uv/) — `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — the only required tool
 
-### Setup
+### First run
 
 ```bash
-# 1. Clone and enter the project
 git clone <repo-url>
 cd printshopmgr
-
-# 2. Create your .env file
-cp .env.example .env
-# Edit .env — at minimum set SECRET_KEY:
-#   python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-
-# 3. Build and start all services (web + db + redis + celery + celery-beat)
-uv sync
-docker compose build
-docker compose up -d
-
-# 4. Run migrations and load initial reference data
-docker compose exec web uv run python manage.py migrate
-docker compose exec web uv run python manage.py loaddata fixtures/initial_data.json
-
-# 5. Create a superuser (owner account)
-docker compose exec web uv run python manage.py createsuperuser
-
-# 6. (Optional) Load demo data to explore the UI
-docker compose exec web uv run python manage.py create_demo_data
+make dev
 ```
 
-Open http://localhost:8000 — log in with the superuser you created.
+That's it. `make dev` will:
+1. Copy `.env.example` → `.env` (skipped if `.env` already exists)
+2. Build the Docker image
+3. Start all 5 services (web, db, redis, celery, celery-beat)
+4. Run all migrations automatically
+5. Load initial reference data (product types, customer types, bank accounts)
+6. Create a default superuser if none exists
 
-Demo accounts (if you ran `create_demo_data`): `owner`, `counter1`, `designer1`, `operator1` — all with password `demo1234`.
+Open **http://localhost:8000** and log in:
+
+| Username | Password |
+|---|---|
+| `admin` | `admin` |
+
+> **Change the password immediately** after first login in production.
+
+### Optional: load demo data
+
+```bash
+make demo
+```
+
+Adds sample customers, jobs, and payments so you can explore the UI right away.
+Demo accounts: `owner`, `counter1`, `designer1`, `operator1` — all with password `demo1234`.
+
+---
+
+### Makefile reference
+
+| Command | What it does |
+|---|---|
+| `make dev` | Build + start all services (runs migrations automatically) |
+| `make test` | Run the full test suite inside the container |
+| `make shell` | Open a Django shell |
+| `make logs` | Tail web server logs |
+| `make demo` | Load demo data (run once after `make dev`) |
 
 ---
 
 ### Daily Development
 
 ```bash
-docker compose up -d                       # Start all 5 services
-docker compose down                        # Stop
+docker compose up -d                       # Start all 5 services (migrations run on web startup)
+docker compose down                        # Stop all services
+docker compose down -v                     # Stop and wipe all data volumes (full reset)
 
 # Django management
 docker compose exec web uv run python manage.py makemigrations
 docker compose exec web uv run python manage.py migrate
-docker compose exec web uv run python manage.py shell
+docker compose exec web uv run python manage.py shell  # or: make shell
 
 # Tests
-docker compose exec web uv run pytest
+make test                                  # Run full suite
 docker compose exec web uv run pytest --cov
 
 # Linting / formatting
@@ -111,10 +124,10 @@ docker compose exec web uv run ruff format .
 
 # Add a Python package
 uv add <package-name>
-docker compose build                       # Rebuild all images with new dep
+docker compose build web                   # Rebuild image with new dep
 
-# Reset demo data
-docker compose exec web uv run python manage.py create_demo_data --reset
+# Reset everything to a clean state
+docker compose down -v && make dev
 ```
 
 ---
@@ -158,7 +171,7 @@ See `.env.example` for the full list. Key variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `SECRET_KEY` | — | Django secret key — generate a fresh one per environment |
+| `SECRET_KEY` | dev key in `.env.example` | Django secret key — **generate a fresh one for production** |
 | `DATABASE_URL` | postgres://…@db/… | PostgreSQL connection string |
 | `DEBUG` | `False` | Set `True` for local development |
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated allowed hostnames |

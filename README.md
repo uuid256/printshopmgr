@@ -98,6 +98,8 @@ Job management system for Thai print shops.
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) — the only required tool
 
+> **Windows users**: see the [Windows setup](#windows-setup) section below.
+
 ### First run
 
 ```bash
@@ -172,6 +174,42 @@ docker compose build web                   # Rebuild image with new dep
 # Reset everything to a clean state
 docker compose down -v && make dev
 ```
+
+---
+
+## Windows Setup
+
+Docker Desktop runs fine on Windows. The only friction is that `make` is not available by default. Two options:
+
+### Option A — WSL2 (recommended)
+
+WSL2 gives you a full Linux environment and the best Docker performance on Windows.
+
+1. Enable WSL2 and install Ubuntu from the Microsoft Store
+2. Install Docker Desktop and enable **"Use the WSL 2 based engine"** in Settings → General
+3. Open an **Ubuntu** terminal (not PowerShell) and clone inside the WSL filesystem:
+   ```bash
+   # Clone inside WSL home dir — NOT under /mnt/c/... (slow)
+   cd ~
+   git clone <repo-url>
+   cd printshopmgr
+   make dev
+   ```
+4. Open http://localhost:8000 — it works from your Windows browser too.
+
+### Option B — PowerShell (no WSL)
+
+If you prefer to stay in PowerShell, replace every `make <target>` with the equivalent commands:
+
+| `make` target | PowerShell equivalent |
+|---|---|
+| `make dev` | `cp .env.example .env; docker compose up --build` |
+| `make test` | `docker compose exec web uv run pytest -v` |
+| `make shell` | `docker compose exec web uv run python manage.py shell` |
+| `make logs` | `docker compose logs -f web` |
+| `make demo` | `docker compose exec web uv run python manage.py create_demo_data` |
+
+> **Note**: Skip the `cp` step if `.env` already exists. The rest of the workflow (migrations, superuser creation, fixtures) is identical — it all runs inside Docker.
 
 ---
 

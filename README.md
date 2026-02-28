@@ -35,6 +35,49 @@ Job management system for Thai print shops.
 
 ---
 
+## Architecture
+
+```
+  Browser
+  (HTMX + Alpine.js + Tailwind)
+        │  HTTP
+        ▼
+┌───────────────────────────────────────────────────────┐
+│  web  (Django 5 / Python 3.13)                        │
+│                                                       │
+│  accounts  customers  jobs  payments  documents       │
+│  production  dashboard  notifications  public         │
+│                                                       │
+│  WeasyPrint (PDF)   django-celery-beat (schedules)    │
+└───────┬───────────────────┬───────────────────────────┘
+        │ SQL               │ broker / results
+        ▼                   ▼
+  ┌──────────┐        ┌──────────┐
+  │PostgreSQL│        │  Redis   │
+  │    16    │        │    7     │
+  └──────────┘        └────┬─────┘
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+       ┌─────────────┐        ┌──────────────────┐
+       │celery worker│        │  celery-beat     │
+       │ (tasks)     │        │  (scheduler)     │
+       └──────┬──────┘        └──────────────────┘
+              │
+     ┌────────┴────────┐
+     ▼                 ▼
+ LINE API          SMTP / email
+ (customer         (owner
+  notifications)    notifications)
+```
+
+**Request flow**
+- Staff/owner → `web` (Django views, HTMX partials)
+- Customer → `public/` tracking page (no login, UUID URL) or LINE push
+- PDF generation → WeasyPrint runs in-process inside `web`
+- Async work (LINE push, email) → queued via Redis → `celery` worker
+- Scheduled tasks (daily summaries, reminders) → `celery-beat` → Redis → `celery`
+
 ## Tech Stack
 
 | Layer | Technology |

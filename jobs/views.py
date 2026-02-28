@@ -2,6 +2,7 @@
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -15,14 +16,59 @@ from .models import Job, JobFile, JobStatus
 @login_required
 def job_list(request):
     status_filter = request.GET.get("status", "")
+    q = request.GET.get("q", "").strip()
     jobs = Job.objects.select_related("customer", "product_type").order_by("-created_at")
     if status_filter:
         jobs = jobs.filter(status=status_filter)
+    if q:
+        jobs = jobs.filter(
+            Q(title__icontains=q)
+            | Q(customer__name__icontains=q)
+            | Q(customer__phone__icontains=q)
+        )
     return render(
         request,
         "jobs/list.html",
-        {"jobs": jobs, "status_filter": status_filter, "all_statuses": JobStatus.choices, "today": timezone.localdate()},
+        {
+            "jobs": jobs,
+            "status_filter": status_filter,
+            "all_statuses": JobStatus.choices,
+            "today": timezone.localdate(),
+            "q": q,
+        },
     )
+
+
+@login_required
+def job_slip_pdf(request, pk):
+    """Generate an A5 job slip PDF with QR code for the customer tracking URL."""
+    import base64
+    import io
+
+    import qrcode
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    from documents.models import Setting
+
+    job = get_object_or_404(
+        Job.objects.select_related("customer", "product_type"),
+        pk=pk,
+    )
+    shop_info = {k: Setting.get(k, "") for k in ["shop_name", "shop_address", "shop_phone"]}
+    tracking_url = request.build_absolute_uri(job.get_tracking_url())
+    buf = io.BytesIO()
+    qrcode.make(tracking_url).save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    html_string = render_to_string(
+        "jobs/pdf/job_slip.html",
+        {"job": job, "shop": shop_info, "qr_b64": qr_b64},
+        request=request,
+    )
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri("/")).write_pdf()
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="job_{job.pk}_slip.pdf"'
+    return response
 
 
 @login_required
@@ -56,6 +102,25 @@ def job_create(request):
     else:
         form = JobCreateForm(initial={"customer": request.GET.get("customer")})
     return render(request, "jobs/create.html", {"form": form})
+
+
+@role_required(Role.COUNTER, Role.OWNER)
+def job_reorder(request, pk):
+    """Pre-fill the job creation form from an existing job."""
+    from .forms import JobCreateForm
+
+    source = get_object_or_404(Job.objects.select_related("customer", "product_type", "assigned_designer"), pk=pk)
+    copy_fields = [
+        "title", "description", "quantity", "width_cm", "height_cm",
+        "quoted_price", "deposit_amount", "discount_amount", "internal_notes",
+    ]
+    initial = {field: getattr(source, field) for field in copy_fields}
+    initial["customer"] = source.customer_id
+    initial["product_type"] = source.product_type_id
+    if source.assigned_designer_id:
+        initial["assigned_designer"] = source.assigned_designer_id
+    form = JobCreateForm(initial=initial)
+    return render(request, "jobs/create.html", {"form": form, "reorder_source": source})
 
 
 @role_required(Role.COUNTER, Role.OWNER)
@@ -95,6 +160,24 @@ def job_update_status(request, pk):
             send_status_notification(job)
         except Exception:
             pass
+
+    # In-app notifications for creator and assigned designer
+    try:
+        from notifications.models import Notification
+        recipients = set()
+        if hasattr(job, "created_by_id") and job.created_by_id:
+            recipients.add(job.created_by_id)
+        if job.assigned_designer_id:
+            recipients.add(job.assigned_designer_id)
+        for uid in recipients:
+            Notification.objects.create(
+                user_id=uid,
+                job=job,
+                title=f"งาน #{job.pk} เปลี่ยนสถานะ → {job.get_status_display()}",
+                notif_type=Notification.Type.STATUS_CHANGE,
+            )
+    except Exception:
+        pass
 
     # Return updated status badge partial for HTMX swap
     return render(request, "jobs/partials/status_badge.html", {"job": job})

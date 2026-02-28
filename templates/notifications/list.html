@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}การแจ้งเตือน — Print Shop Manager{% endblock %}
+{% block breadcrumb %}การแจ้งเตือน{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl space-y-2">
+
+  {% if not notifications %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-12 text-center">
+    <p class="text-gray-400 text-sm">ไม่มีการแจ้งเตือน</p>
+  </div>
+  {% endif %}
+
+  {% for notif in notifications %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-3.5 flex items-start gap-3
+              {% if not notif.is_read %}border-l-4 border-l-indigo-500{% endif %}">
+
+    <div class="flex-shrink-0 mt-0.5">
+      {% if notif.notif_type == 'status_change' %}
+      <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600 text-xs">🔄</span>
+      {% elif notif.notif_type == 'payment' %}
+      <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-600 text-xs">💳</span>
+      {% else %}
+      <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-100 text-yellow-600 text-xs">⚠️</span>
+      {% endif %}
+    </div>
+
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-gray-900 {% if not notif.is_read %}font-semibold{% endif %}">
+        {{ notif.title }}
+      </p>
+      {% if notif.message %}
+      <p class="text-xs text-gray-500 mt-0.5">{{ notif.message }}</p>
+      {% endif %}
+      <div class="flex items-center gap-3 mt-1">
+        <span class="text-xs text-gray-400">{{ notif.created_at|thai_date_short }}</span>
+        {% if notif.job %}
+        <a href="{% url 'jobs:detail' notif.job.pk %}"
+           class="text-xs text-indigo-600 hover:underline">ดูงาน #{{ notif.job.pk }}</a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

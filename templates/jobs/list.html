@@ -14,13 +14,35 @@
 {% block content %}
 <div class="bg-white rounded-xl shadow-sm border border-gray-100">
 
+  <!-- Search -->
+  <div class="px-4 pt-3 pb-2 border-b border-gray-100">
+    <form method="get" class="flex gap-2">
+      {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="ค้นหาชื่องาน ลูกค้า หรือเบอร์โทร..."
+             class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <button type="submit"
+              class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
+        ค้นหา
+      </button>
+      {% if q %}
+      <a href="{% url 'jobs:list' %}{% if status_filter %}?status={{ status_filter }}{% endif %}"
+         class="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+        ✕ ล้าง
+      </a>
+      {% endif %}
+    </form>
+    {% if q %}
+    <p class="text-xs text-gray-500 mt-2">ผลการค้นหา "{{ q }}": {{ jobs|length }} งาน</p>
+    {% endif %}
+  </div>
+
   <!-- Filters -->
   <div class="px-4 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
-    <a href="{% url 'jobs:list' %}" class="px-3 py-1 rounded-full text-xs font-medium {% if not status_filter %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+    <a href="{% url 'jobs:list' %}{% if q %}?q={{ q }}{% endif %}" class="px-3 py-1 rounded-full text-xs font-medium {% if not status_filter %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
       ทั้งหมด
     </a>
     {% for value, label in all_statuses %}
-    <a href="?status={{ value }}" class="px-3 py-1 rounded-full text-xs font-medium {% if status_filter == value %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+    <a href="?status={{ value }}{% if q %}&q={{ q }}{% endif %}" class="px-3 py-1 rounded-full text-xs font-medium {% if status_filter == value %}bg-indigo-100 text-indigo-700{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
       {{ label }}
     </a>
     {% endfor %}

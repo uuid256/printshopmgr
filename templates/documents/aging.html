@@ -8,6 +8,10 @@
 {% endblock %}
 
 {% block header_actions %}
+<a href="{% url 'documents:aging_export' %}"
+   class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+  ⬇ Excel
+</a>
 <button onclick="window.print()"
         class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
   🖨 พิมพ์
@@ -63,6 +67,9 @@
               {{ row.job.customer.name }}
             </a>
             <p class="text-xs text-gray-500 truncate max-w-xs">{{ row.job.title }}</p>
+            <a href="{% url 'documents:monthly_statement' customer_id=row.job.customer.pk %}"
+               target="_blank"
+               class="text-xs text-gray-400 hover:text-indigo-600">Statement</a>
           </td>
           <td class="px-4 py-3 font-mono text-xs text-gray-600 hidden sm:table-cell">
             {% if row.invoice_doc %}

@@ -3,8 +3,10 @@ Notifications app — Phase 2: LINE Messaging API integration.
 
 CustomerLineBinding links a Customer to their LINE user ID (set via follow event).
 NotificationLog records every outgoing LINE message for audit/debugging.
+Notification is an in-app notification for staff users.
 """
 
+from django.conf import settings
 from django.db import models
 
 
@@ -65,3 +67,45 @@ class NotificationLog(models.Model):
     def __str__(self):
         status = "✓" if self.success else "✗"
         return f"{status} {self.get_message_type_display()} → {self.line_user_id}"
+
+
+class Notification(models.Model):
+    """In-app notification for staff users (status changes, payments, low stock)."""
+
+    class Type(models.TextChoices):
+        STATUS_CHANGE = "status_change", "เปลี่ยนสถานะ"
+        PAYMENT = "payment", "ชำระเงิน"
+        LOW_STOCK = "low_stock", "วัสดุใกล้หมด"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        verbose_name="ผู้รับ",
+    )
+    job = models.ForeignKey(
+        "jobs.Job",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+        verbose_name="งาน",
+    )
+    title = models.CharField(max_length=200, verbose_name="หัวข้อ")
+    message = models.TextField(blank=True, verbose_name="รายละเอียด")
+    notif_type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.STATUS_CHANGE,
+        verbose_name="ประเภท",
+    )
+    is_read = models.BooleanField(default=False, db_index=True, verbose_name="อ่านแล้ว")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "การแจ้งเตือน"
+        verbose_name_plural = "การแจ้งเตือน"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{'✓' if self.is_read else '●'} {self.title}"

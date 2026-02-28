@@ -156,3 +156,26 @@ def _handle_unfollow(line_user_id):
 
     CustomerLineBinding.objects.filter(line_user_id=line_user_id).delete()
     logger.info("LINE unfollow: %s", line_user_id)
+
+
+@login_required
+def notification_list(request):
+    """Show the current user's last 50 notifications and mark all as read."""
+    from .models import Notification
+
+    notifs = Notification.objects.filter(user=request.user).select_related("job")[:50]
+    # Evaluate queryset before marking read so unread styling shows correctly
+    notifs = list(notifs)
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return render(request, "notifications/list.html", {"notifications": notifs})
+
+
+@login_required
+@require_POST
+def notification_mark_read(request):
+    """HTMX: mark a single notification as read. Returns empty 200."""
+    from .models import Notification
+
+    nid = request.POST.get("id")
+    Notification.objects.filter(pk=nid, user=request.user).update(is_read=True)
+    return HttpResponse("")

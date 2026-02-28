@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load thai_filters %}
 
-{% block title %}{% if job %}แก้ไขงาน #{{ job.pk }}{% else %}รับงานใหม่{% endif %} — Print Shop Manager{% endblock %}
+{% block title %}{% if job %}แก้ไขงาน #{{ job.pk }}{% elif reorder_source %}สั่งซื้อซ้ำ #{{ reorder_source.pk }}{% else %}รับงานใหม่{% endif %} — Print Shop Manager{% endblock %}
 
 {% block breadcrumb %}
   <a href="{% url 'jobs:list' %}" class="hover:text-indigo-600">งาน</a>
   <span class="mx-1 text-gray-400">/</span>
-  {% if job %}แก้ไข #{{ job.pk }}{% else %}รับงานใหม่{% endif %}
+  {% if job %}แก้ไข #{{ job.pk }}{% elif reorder_source %}สั่งซื้อซ้ำ #{{ reorder_source.pk }}{% else %}รับงานใหม่{% endif %}
 {% endblock %}
 
 {% block extra_head %}
@@ -37,7 +37,7 @@
       <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">ข้อมูลพื้นฐาน</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <!-- Customer autocomplete -->
-        <div x-data="customerSearch('{{ job.customer.pk }}', '{{ job.customer.name|escapejs }}')"
+        <div x-data="customerSearch('{% if job %}{{ job.customer.pk }}{% elif reorder_source %}{{ reorder_source.customer.pk }}{% endif %}', '{% if job %}{{ job.customer.name|escapejs }}{% elif reorder_source %}{{ reorder_source.customer.name|escapejs }}{% endif %}')"
              class="relative">
           <label class="block text-sm font-medium text-gray-700 mb-1">ลูกค้า <span class="text-red-500">*</span></label>
 
@@ -166,7 +166,7 @@
     <div class="flex gap-3">
       <button type="submit"
               class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
-        {% if job %}บันทึกการแก้ไข{% else %}รับงาน{% endif %}
+        {% if job %}บันทึกการแก้ไข{% elif reorder_source %}รับงานซ้ำ{% else %}รับงาน{% endif %}
       </button>
       <a href="{% url 'jobs:list' %}"
          class="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load thai_filters %}
+
+{% block title %}รายได้ประจำเดือน — Print Shop Manager{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'documents:list' %}" class="hover:text-indigo-600">เอกสาร</a>
+  <span class="mx-1 text-gray-400">/</span> รายได้
+{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Month navigation -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-4 flex items-center justify-between">
+    <a href="?month={{ prev_month }}&year={{ prev_year }}"
+       class="flex items-center gap-1 text-sm text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+      ← เดือนก่อน
+    </a>
+    <div class="text-center">
+      <p class="text-base font-semibold text-gray-900">{{ month_name }} {{ year }}</p>
+      <a href="{% url 'documents:revenue' %}" class="text-xs text-indigo-600 hover:underline">เดือนปัจจุบัน</a>
+    </div>
+    <a href="?month={{ next_month }}&year={{ next_year }}"
+       class="flex items-center gap-1 text-sm text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+      เดือนถัดไป →
+    </a>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-2 gap-3">
+    <div class="bg-white border border-gray-100 rounded-xl p-5 text-center shadow-sm">
+      <p class="text-xs text-gray-500 mb-1">รายรับรวม</p>
+      <p class="text-2xl font-bold text-indigo-600">{{ total|baht }}</p>
+    </div>
+    <div class="bg-white border border-gray-100 rounded-xl p-5 text-center shadow-sm">
+      <p class="text-xs text-gray-500 mb-1">งานเสร็จสิ้น</p>
+      <p class="text-2xl font-bold text-green-600">{{ completed_count }} งาน</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <!-- Breakdown by product type -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h3 class="text-sm font-semibold text-gray-700">รายได้แยกตามประเภทสินค้า</h3>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-4 py-2">ประเภท</th>
+            <th class="text-center px-4 py-2">รายการ</th>
+            <th class="text-right px-4 py-2">ยอดรวม</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for row in by_product %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5">{{ row.job__product_type__name|default:"—" }}</td>
+            <td class="px-4 py-2.5 text-center text-gray-500">{{ row.count }}</td>
+            <td class="px-4 py-2.5 text-right font-medium">{{ row.total|baht }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-400 text-sm">ไม่มีรายการ</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Breakdown by payment method -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-100">
+        <h3 class="text-sm font-semibold text-gray-700">รายได้แยกตามวิธีชำระ</h3>
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
+            <th class="text-left px-4 py-2">วิธีชำระ</th>
+            <th class="text-right px-4 py-2">ยอดรวม</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for row in by_method %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5">
+              {% if row.method == 'cash' %}เงินสด
+              {% elif row.method == 'promptpay' %}PromptPay
+              {% elif row.method == 'bank_transfer' %}โอนผ่านธนาคาร
+              {% elif row.method == 'credit_card' %}บัตรเครดิต
+              {% elif row.method == 'cheque' %}เช็ค
+              {% else %}{{ row.method }}{% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-right font-medium">{{ row.total|baht }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2" class="px-4 py-8 text-center text-gray-400 text-sm">ไม่มีรายการ</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

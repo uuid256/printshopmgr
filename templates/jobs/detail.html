@@ -10,6 +10,14 @@
 {% endblock %}
 
 {% block header_actions %}
+<a href="{% url 'jobs:slip' job.pk %}" target="_blank"
+   class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+  พิมพ์ใบงาน
+</a>
+<a href="{% url 'jobs:reorder' job.pk %}"
+   class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+  สั่งซื้อซ้ำ
+</a>
 <a href="{% url 'jobs:edit' job.pk %}"
    class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
   แก้ไข

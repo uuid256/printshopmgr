@@ -1,0 +1,267 @@
+{% load thai_filters %}<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 15mm 18mm 20mm 18mm;
+
+    @bottom-center {
+      content: "ใบแจ้งยอด — {{ customer.name }} — หน้า " counter(page) " / " counter(pages);
+      font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+      font-size: 7pt;
+      color: #9ca3af;
+    }
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+    font-size: 10pt;
+    color: #1f2937;
+    line-height: 1.5;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2.5pt solid #4f46e5;
+    padding-bottom: 10pt;
+    margin-bottom: 12pt;
+  }
+
+  .shop-name {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #4f46e5;
+  }
+
+  .shop-meta {
+    font-size: 8pt;
+    color: #6b7280;
+    margin-top: 3pt;
+    line-height: 1.6;
+  }
+
+  .doc-header {
+    text-align: right;
+  }
+
+  .doc-type {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .doc-meta {
+    font-size: 8.5pt;
+    color: #6b7280;
+    margin-top: 4pt;
+    line-height: 1.6;
+  }
+
+  .parties {
+    display: flex;
+    gap: 12pt;
+    margin-bottom: 14pt;
+  }
+
+  .party-box {
+    flex: 1;
+    background: #f9fafb;
+    border: 0.5pt solid #e5e7eb;
+    border-radius: 4pt;
+    padding: 8pt 10pt;
+  }
+
+  .party-label {
+    font-size: 7pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    margin-bottom: 4pt;
+  }
+
+  .party-name {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .party-meta {
+    font-size: 8.5pt;
+    color: #6b7280;
+    margin-top: 2pt;
+    line-height: 1.6;
+  }
+
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+
+  .items-table thead th {
+    background: #4f46e5;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 6pt 8pt;
+    text-align: left;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .items-table thead th.right { text-align: right; }
+
+  .items-table tbody td {
+    padding: 7pt 8pt;
+    border-bottom: 0.5pt solid #f3f4f6;
+    vertical-align: top;
+  }
+
+  .items-table tbody tr:nth-child(even) td {
+    background: #fafafa;
+  }
+
+  .items-table tbody td.right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .totals-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0;
+    border-top: 0.5pt solid #e5e7eb;
+  }
+
+  .totals-table {
+    width: 220pt;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+
+  .totals-table td {
+    padding: 4pt 8pt;
+  }
+
+  .totals-table td.label {
+    color: #6b7280;
+    text-align: right;
+  }
+
+  .totals-table td.amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-width: 80pt;
+  }
+
+  .totals-table tr.grand-total td {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #4f46e5;
+    border-top: 1.5pt solid #4f46e5;
+    padding-top: 6pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="shop-name">{{ shop.shop_name|default:"Print Shop" }}</div>
+    <div class="shop-meta">
+      {% if shop.shop_address %}{{ shop.shop_address }}<br>{% endif %}
+      {% if shop.shop_tax_id %}เลขประจำตัวผู้เสียภาษี: {{ shop.shop_tax_id }}<br>{% endif %}
+      {% if shop.shop_phone %}โทร: {{ shop.shop_phone }}{% endif %}
+    </div>
+  </div>
+  <div class="doc-header">
+    <div class="doc-type">ใบแจ้งยอด</div>
+    <div class="doc-meta">
+      ประจำเดือน {{ month_name }} {{ year }}<br>
+      วันที่พิมพ์: {% now "j N Y" %}
+    </div>
+  </div>
+</div>
+
+<!-- Customer info -->
+<div class="parties">
+  <div class="party-box">
+    <div class="party-label">ลูกค้า</div>
+    <div class="party-name">{{ customer.name }}</div>
+    <div class="party-meta">
+      {% if customer.phone %}โทร: {{ customer.phone }}<br>{% endif %}
+      {% if customer.tax_id %}เลขผู้เสียภาษี: {{ customer.tax_id }}<br>{% endif %}
+      {% if customer.billing_address %}{{ customer.billing_address }}{% endif %}
+    </div>
+  </div>
+  <div class="party-box">
+    <div class="party-label">ข้อมูลใบแจ้งยอด</div>
+    <div class="party-meta" style="line-height:1.9">
+      ช่วงเวลา: {{ month_name }} {{ year }}<br>
+      จำนวนเอกสาร: {{ docs|length }} รายการ<br>
+      ยอดรวม VAT: {{ totals.vat|baht|default:"฿0.00" }}<br>
+      ยอดรวมทั้งสิ้น: <strong>{{ totals.total|baht|default:"฿0.00" }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Documents table -->
+<table class="items-table">
+  <thead>
+    <tr>
+      <th style="width: 30pt">#</th>
+      <th>เลขที่เอกสาร</th>
+      <th>ประเภท</th>
+      <th>วันที่</th>
+      <th>งาน</th>
+      <th class="right" style="width: 60pt">VAT</th>
+      <th class="right" style="width: 80pt">ยอดรวม</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for doc in docs %}
+    <tr>
+      <td style="text-align:center; color:#9ca3af">{{ forloop.counter }}</td>
+      <td style="font-family: monospace; font-size: 8.5pt">{{ doc.document_number }}</td>
+      <td>{{ doc.get_document_type_display }}</td>
+      <td>{{ doc.issued_at|thai_date_short }}</td>
+      <td>{{ doc.job.title|truncatechars:35 }}</td>
+      <td class="right">{{ doc.vat_amount|baht }}</td>
+      <td class="right" style="font-weight:600">{{ doc.total_amount|baht }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="7" style="text-align:center; color:#9ca3af; padding:20pt">ไม่มีเอกสารในช่วงเวลานี้</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Totals -->
+{% if docs %}
+<div class="totals-wrapper">
+  <table class="totals-table">
+    <tr>
+      <td class="label">VAT รวม</td>
+      <td class="amount">{{ totals.vat|baht|default:"฿0.00" }}</td>
+    </tr>
+    <tr class="grand-total">
+      <td class="label" style="color:#4f46e5">ยอดรวมทั้งสิ้น</td>
+      <td class="amount">{{ totals.total|baht|default:"฿0.00" }}</td>
+    </tr>
+  </table>
+</div>
+{% endif %}
+
+</body>
+</html>

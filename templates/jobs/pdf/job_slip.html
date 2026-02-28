@@ -1,0 +1,259 @@
+{% load thai_filters %}<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A5;
+    margin: 10mm;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+    font-size: 9.5pt;
+    color: #1f2937;
+    line-height: 1.5;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2pt solid #4f46e5;
+    padding-bottom: 6pt;
+    margin-bottom: 8pt;
+  }
+
+  .shop-name {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #4f46e5;
+  }
+
+  .shop-meta {
+    font-size: 7.5pt;
+    color: #6b7280;
+    margin-top: 2pt;
+    line-height: 1.5;
+  }
+
+  .doc-title {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #1f2937;
+    text-align: right;
+  }
+
+  .doc-id {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #4f46e5;
+    text-align: right;
+    margin-top: 2pt;
+  }
+
+  .main-grid {
+    display: flex;
+    gap: 8pt;
+    margin-bottom: 8pt;
+  }
+
+  .info-block {
+    flex: 1;
+  }
+
+  .qr-block {
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  .qr-block img {
+    width: 36mm;
+    height: 36mm;
+    display: block;
+  }
+
+  .qr-label {
+    font-size: 6.5pt;
+    color: #9ca3af;
+    margin-top: 2pt;
+    text-align: center;
+  }
+
+  table.fields {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+
+  table.fields td {
+    padding: 3pt 4pt;
+    vertical-align: top;
+    border-bottom: 0.5pt solid #f3f4f6;
+  }
+
+  table.fields td.label {
+    color: #6b7280;
+    white-space: nowrap;
+    width: 30%;
+    font-size: 8pt;
+  }
+
+  table.fields td.value {
+    font-weight: 500;
+    color: #111827;
+  }
+
+  .section-title {
+    font-size: 8pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    margin-bottom: 4pt;
+    margin-top: 8pt;
+  }
+
+  .notes-box {
+    background: #f9fafb;
+    border: 0.5pt solid #e5e7eb;
+    border-radius: 3pt;
+    padding: 6pt 8pt;
+    font-size: 8.5pt;
+    min-height: 20pt;
+  }
+
+  .checkboxes {
+    display: flex;
+    gap: 8pt;
+    flex-wrap: wrap;
+    margin-top: 6pt;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 4pt;
+    font-size: 8.5pt;
+    color: #374151;
+  }
+
+  .check-box {
+    width: 10pt;
+    height: 10pt;
+    border: 1pt solid #6b7280;
+    border-radius: 2pt;
+    flex-shrink: 0;
+  }
+
+  .footer {
+    margin-top: 10pt;
+    border-top: 0.5pt solid #e5e7eb;
+    padding-top: 5pt;
+    display: flex;
+    justify-content: space-between;
+    font-size: 7pt;
+    color: #9ca3af;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="shop-name">{{ shop.shop_name|default:"Print Shop" }}</div>
+    <div class="shop-meta">
+      {% if shop.shop_address %}{{ shop.shop_address }}<br>{% endif %}
+      {% if shop.shop_phone %}โทร: {{ shop.shop_phone }}{% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="doc-title">ใบงาน</div>
+    <div class="doc-id">#{{ job.pk }}</div>
+  </div>
+</div>
+
+<!-- Main content: info + QR code -->
+<div class="main-grid">
+  <div class="info-block">
+    <table class="fields">
+      <tr>
+        <td class="label">ลูกค้า</td>
+        <td class="value">{{ job.customer.name }}</td>
+      </tr>
+      <tr>
+        <td class="label">เบอร์โทร</td>
+        <td class="value">{{ job.customer.phone|default:"—" }}</td>
+      </tr>
+      <tr>
+        <td class="label">ชื่องาน</td>
+        <td class="value">{{ job.title }}</td>
+      </tr>
+      <tr>
+        <td class="label">ประเภท</td>
+        <td class="value">{{ job.product_type.name }}</td>
+      </tr>
+      {% if job.width_cm and job.height_cm %}
+      <tr>
+        <td class="label">ขนาด</td>
+        <td class="value">{{ job.width_cm }} × {{ job.height_cm }} ซม.</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <td class="label">จำนวน</td>
+        <td class="value">{{ job.quantity }} {{ job.product_type.unit }}</td>
+      </tr>
+      <tr>
+        <td class="label">ราคา</td>
+        <td class="value">{{ job.quoted_price|baht }}</td>
+      </tr>
+      <tr>
+        <td class="label">กำหนดส่ง</td>
+        <td class="value">{{ job.due_date|thai_date|default:"—" }}</td>
+      </tr>
+      <tr>
+        <td class="label">รับงานวันที่</td>
+        <td class="value">{{ job.created_at|thai_date }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="qr-block">
+    <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR Code">
+    <div class="qr-label">ติดตามสถานะงาน</div>
+  </div>
+</div>
+
+<!-- Notes -->
+{% if job.description or job.internal_notes %}
+<div class="section-title">หมายเหตุ</div>
+<div class="notes-box">
+  {% if job.description %}{{ job.description }}{% endif %}
+  {% if job.description and job.internal_notes %}<br>{% endif %}
+  {% if job.internal_notes %}<em>{{ job.internal_notes }}</em>{% endif %}
+</div>
+{% endif %}
+
+<!-- Production checkboxes -->
+<div class="section-title">ขั้นตอนการผลิต</div>
+<div class="checkboxes">
+  <div class="check-item"><div class="check-box"></div> พิมพ์</div>
+  <div class="check-item"><div class="check-box"></div> ตัด</div>
+  <div class="check-item"><div class="check-box"></div> เคลือบ</div>
+  <div class="check-item"><div class="check-box"></div> QC</div>
+  <div class="check-item"><div class="check-box"></div> พร้อมรับ</div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>พิมพ์โดยระบบ Print Shop Manager</span>
+  <span>สถานะ: {{ job.get_status_display }}</span>
+</div>
+
+</body>
+</html>

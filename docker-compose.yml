@@ -4,6 +4,7 @@ services:
     command: uv run python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
+      - venv:/app/.venv
       - media_files:/app/media
     ports:
       - "8000:8000"
@@ -36,6 +37,7 @@ services:
     command: uv run celery -A config worker -l info
     volumes:
       - .:/app
+      - venv:/app/.venv
       - media_files:/app/media
     depends_on:
       db:
@@ -49,6 +51,7 @@ services:
     command: uv run celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/app
+      - venv:/app/.venv
     depends_on:
       db:
         condition: service_healthy
@@ -59,3 +62,4 @@ services:
 volumes:
   postgres_data:
   media_files:
+  venv:

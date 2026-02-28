@@ -103,7 +103,7 @@ Job management system for Thai print shops.
 ### First run
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/uuid256/printshopmgr.git
 cd printshopmgr
 make dev
 ```
@@ -191,7 +191,7 @@ WSL2 gives you a full Linux environment and the best Docker performance on Windo
    ```bash
    # Clone inside WSL home dir — NOT under /mnt/c/... (slow)
    cd ~
-   git clone <repo-url>
+   git clone https://github.com/uuid256/printshopmgr.git
    cd printshopmgr
    make dev
    ```
